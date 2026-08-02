@@ -9,7 +9,8 @@ import {
   BRANDS,
 } from '@/data/catalog';
 import type { Category, AgeGroup, BrandName } from '@/data/catalog';
-import { useScrollReveal } from '@/hooks/useScrollReveal';n
+import { useScrollReveal } from '@/hooks/useScrollReveal';
+
 type SortKey = 'novidades' | 'maisvendidos' | 'precoasc' | 'precodesc';
 
 const SORT_LABELS: Record<SortKey, string> = {

@@ -54,6 +54,7 @@ export function Footer() {
 
   return (
     <footer className="mt-24 bg-cream-100">
+      {/* newsletter band */}
       <div className="container-x pt-8">
         <div className="reveal relative overflow-hidden rounded-6xl bg-gradient-to-br from-lilac-200 via-cream-100 to-sky-200 p-10 sm:p-14 lg:p-20">
           <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-lilac-300/50 blur-3xl" />
@@ -94,6 +95,7 @@ export function Footer() {
         </div>
       </div>
 
+      {/* links */}
       <div className="container-x mt-16 grid gap-10 border-t border-ink-100 pt-14 lg:grid-cols-[1.6fr_1fr_1fr_1fr]">
         <div>
           <DipaLogo />
@@ -101,6 +103,7 @@ export function Footer() {
             Tudo para os mais pequenos, escolhido com carinho. Roupa, brinquedos, mochilas e
             acessórios de qualidade premium para acompanhar a infância.
           </p>
+          {/* contact info */}
           <div className="mt-5 flex flex-col gap-2 text-sm text-ink-600">
             <a href="tel:+351933968223" className="flex items-center gap-2 transition-colors hover:text-lilac-700">
               <Phone size={15} className="shrink-0 text-lilac-500" /> +351 933 968 223
@@ -140,6 +143,7 @@ export function Footer() {
         ))}
       </div>
 
+      {/* bottom bar */}
       <div className="container-x mt-14 flex flex-col items-center justify-between gap-4 border-t border-ink-100 py-7 text-xs font-medium text-ink-500 sm:flex-row">
         <p>© {new Date().getFullYear()} Dipa. Feito com carinho em Portugal.</p>
         <p className="flex items-center gap-1.5">

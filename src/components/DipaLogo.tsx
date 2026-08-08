@@ -34,29 +34,37 @@ function DipaMark({ className = '' }: { className?: string }) {
         </linearGradient>
       </defs>
 
+      {/* long ears with inner blush */}
       <path d="M20 27c-3 0-4.6-3-4.6-7 0-4 1.8-7 4.6-7 2.5 0 3.6 2.2 3.6 5" stroke="#9d7df5" strokeWidth="2.3" strokeLinecap="round" />
       <path d="M36 27c3 0 4.6-3 4.6-7 0-4-1.8-7-4.6-7-2.5 0-3.6 2.2-3.6 5" stroke="#9d7df5" strokeWidth="2.3" strokeLinecap="round" />
       <path d="M20 20c-1 0-1.6-1.4-1.6-3.2 0-1.8.6-3.2 1.6-3.2" stroke="#fad4e6" strokeWidth="1.8" strokeLinecap="round" />
       <path d="M36 20c1 0 1.6-1.4 1.6-3.2 0-1.8-.6-3.2-1.6-3.2" stroke="#fad4e6" strokeWidth="1.8" strokeLinecap="round" />
 
+      {/* round head */}
       <ellipse cx="28" cy="32" rx="10.5" ry="9.5" fill="#fff" stroke="#9d7df5" strokeWidth="2.3" />
 
+      {/* dress / body */}
       <path d="M19 38c0 6 4 11 9 11s9-5 9-11c0-2-2-3.5-4-3.5h-10c-2 0-4 1.5-4 3.5z" fill="url(#dipa-dress)" stroke="#9d7df5" strokeWidth="2" />
+      {/* polka dots */}
       <circle cx="24" cy="42" r="1.1" fill="#9d7df5" opacity="0.5" />
       <circle cx="29" cy="44" r="1.1" fill="#ec8db4" opacity="0.6" />
       <circle cx="33" cy="41" r="1.1" fill="#9d7df5" opacity="0.5" />
       <circle cx="27" cy="46" r="0.9" fill="#ec8db4" opacity="0.5" />
 
+      {/* face */}
       <circle cx="24.5" cy="31" r="1.5" fill="#3c3c44" />
       <circle cx="31.5" cy="31" r="1.5" fill="#3c3c44" />
       <circle cx="25" cy="30.5" r="0.5" fill="#fff" />
       <circle cx="32" cy="30.5" r="0.5" fill="#fff" />
       <path d="M26.5 35c1 1 2 1 3 0" stroke="#ec8db4" strokeWidth="1.6" strokeLinecap="round" />
+      {/* cheeks */}
       <ellipse cx="22" cy="34" rx="2" ry="1.4" fill="#fad4e6" opacity="0.75" />
       <ellipse cx="34" cy="34" rx="2" ry="1.4" fill="#fad4e6" opacity="0.75" />
 
+      {/* arm holding balloon string */}
       <path d="M38 31c0-1.5-3-2 0-5.5" stroke="#ec8db4" strokeWidth="1.5" strokeLinecap="round" />
 
+      {/* heart balloon */}
       <path d="M38 9c-2.2-3-6.6-1.4-6.6 2.4 0 3 4 5.2 6.6 7.6 2.6-2.4 6.6-4.6 6.6-7.6 0-3.8-4.4-5.4-6.6-2.4z" fill="url(#dipa-balloon)" />
       <path d="M35.5 9.6c-.8.6-1.2 1.6-1 2.8" stroke="#fff" strokeWidth="1" strokeLinecap="round" opacity="0.6" />
     </svg>

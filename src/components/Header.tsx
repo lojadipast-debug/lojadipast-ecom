@@ -56,6 +56,7 @@ export function Header({ onOpenSearch }: { onOpenSearch: () => void }) {
 
   return (
     <>
+      {/* announcement marquee — brand lilac */}
       <div className="relative z-50 overflow-hidden bg-lilac-200 text-ink-900">
         <div className="flex">
           <div className="flex shrink-0 animate-marquee items-center py-2 text-[11px] font-bold uppercase tracking-[0.2em] whitespace-nowrap">
@@ -97,6 +98,7 @@ export function Header({ onOpenSearch }: { onOpenSearch: () => void }) {
       >
         <div className="container-x">
           <div className="flex h-18 items-center justify-between gap-4 lg:h-22">
+            {/* left */}
             <div className="flex items-center gap-3">
               <button
                 className="grid h-10 w-10 place-items-center rounded-full text-ink-700 transition-colors hover:bg-lilac-100 lg:hidden"
@@ -110,6 +112,7 @@ export function Header({ onOpenSearch }: { onOpenSearch: () => void }) {
               </button>
             </div>
 
+            {/* center nav */}
             <nav className="hidden items-center gap-0.5 lg:flex">
               {NAV.map((item) => {
                 const isCat = item.key in CATEGORY_LABELS;
@@ -143,6 +146,7 @@ export function Header({ onOpenSearch }: { onOpenSearch: () => void }) {
               })}
             </nav>
 
+            {/* actions */}
             <div className="flex items-center gap-0.5 sm:gap-1">
               <IconBtn onClick={onOpenSearch} label="Pesquisar" hoverLilac>
                 <Search size={19} />
@@ -167,6 +171,7 @@ export function Header({ onOpenSearch }: { onOpenSearch: () => void }) {
         </div>
       </header>
 
+      {/* mobile menu */}
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-ink-900/40 backdrop-blur-sm animate-fade-in" onClick={() => setMobileOpen(false)} />
@@ -208,6 +213,7 @@ export function Header({ onOpenSearch }: { onOpenSearch: () => void }) {
                 <User size={16} /> {user ? 'A minha conta' : 'Entrar / Criar conta'}
               </button>
             </div>
+            {/* contact + socials */}
             <div className="mt-6 flex flex-col gap-3 border-t border-ink-100 pt-6">
               <a href="tel:+351933968223" className="flex items-center gap-2 text-sm font-semibold text-ink-700">
                 <Phone size={15} className="text-lilac-500" /> +351 933 968 223
@@ -282,11 +288,13 @@ function MegaMenu({ category, onNavigate }: { category: Category; onNavigate: (t
   const subs = SUBCATEGORIES[category] ?? [];
   return (
     <div className="absolute left-0 top-full z-50 pt-3">
+      {/* invisible bridge so mouse can travel from button to panel */}
       <div className="absolute -top-3 left-0 h-3 w-full" />
       <div
         className="animate-dropdown min-w-[200px] overflow-hidden rounded-2xl bg-white py-2 shadow-[0_8px_32px_rgba(0,0,0,0.10)] ring-1 ring-ink-100/60"
         style={{ transformOrigin: 'top left' }}
       >
+        {/* "Ver tudo" header row */}
         <button
           onClick={() => onNavigate(`/catalogo/${category}`)}
           className="group flex w-full items-center justify-between px-5 py-3 text-left"
@@ -299,6 +307,7 @@ function MegaMenu({ category, onNavigate }: { category: Category; onNavigate: (t
 
         <div className="mx-4 mb-1 h-px bg-ink-100" />
 
+        {/* subcategory list */}
         <ul className="py-1">
           {subs.map((sub, i) => (
             <li key={sub}>

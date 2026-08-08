@@ -63,6 +63,7 @@ export function CartDrawer() {
           </div>
         ) : (
           <>
+            {/* free shipping progress */}
             <div className="px-5 pt-4">
               <p className="text-xs font-medium text-ink-600">
                 {remaining > 0 ? (
@@ -81,6 +82,7 @@ export function CartDrawer() {
               </div>
             </div>
 
+            {/* items */}
             <div className="flex-1 overflow-y-auto px-5 py-4">
               <ul className="flex flex-col gap-4">
                 {items.map((item) => (
@@ -136,6 +138,7 @@ export function CartDrawer() {
               </ul>
             </div>
 
+            {/* footer */}
             <div className="border-t border-ink-100 bg-white px-5 py-4">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-ink-600">Subtotal</span>

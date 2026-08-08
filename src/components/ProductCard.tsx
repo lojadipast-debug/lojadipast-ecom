@@ -20,7 +20,7 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
 
   return (
     <article
-      className="reveal group relative flex flex-col"
+      className="group relative flex flex-col"
       style={{ transitionDelay: `${(index % 4) * 80}ms` }}
     >
       <button
@@ -44,6 +44,7 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
           />
         )}
 
+        {/* badges */}
         <div className="absolute left-3.5 top-3.5 flex flex-col gap-1.5">
           {product.isNew && (
             <span className="rounded-full bg-sky-300 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-ink-900 shadow-soft">
@@ -62,9 +63,11 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
           )}
         </div>
 
+        {/* gradient on hover for legibility */}
         <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-ink-900/40 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
       </button>
 
+      {/* favorite */}
       <button
         onClick={() => toggleFavorite(product.id)}
         aria-label={fav ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
@@ -77,6 +80,7 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
         <Heart size={17} className={fav ? 'fill-white' : ''} />
       </button>
 
+      {/* quick add */}
       <button
         onClick={() =>
           addToCart({

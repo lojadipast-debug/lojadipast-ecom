@@ -1,5 +1,12 @@
+import js from '@eslint/js';
+
 export default [
+  js.configs.recommended,
   {
-    ignores: ['**/*'],
+    rules: {
+      'no-unused-vars': 'off',
+      'no-undef': 'off',
+      'no-empty': 'off',
+    },
   },
 ];

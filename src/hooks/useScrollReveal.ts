@@ -1,35 +1,55 @@
 import { useEffect, useRef } from 'react';
 
-/**
- * Adds the `is-visible` class to `.reveal` elements when they enter the viewport.
- * Lightweight, no deps. Pairs with the `.reveal` CSS utility.
- */
 export function useScrollReveal() {
   const observer = useRef<IntersectionObserver | null>(null);
 
   useEffect(() => {
-    const els = Array.from(document.querySelectorAll<HTMLElement>('.reveal:not(.is-visible)'));
+    const revealElements = (root: ParentNode = document) => {
+      const elements = [
+        ...(root instanceof HTMLElement && root.matches('.reveal:not(.is-visible)') ? [root] : []),
+        ...Array.from(root.querySelectorAll<HTMLElement>('.reveal:not(.is-visible)')),
+      ];
+      if (!('IntersectionObserver' in window)) {
+        elements.forEach((element) => element.classList.add('is-visible'));
+        return;
+      }
+      elements.forEach((element) => observer.current?.observe(element));
+    };
 
-    if (!('IntersectionObserver' in window) || els.length === 0) {
-      els.forEach((el) => el.classList.add('is-visible'));
+    if (!('IntersectionObserver' in window)) {
+      revealElements();
       return;
     }
 
-    const obs = new IntersectionObserver(
+    const intersectionObserver = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             entry.target.classList.add('is-visible');
-            obs.unobserve(entry.target);
+            intersectionObserver.unobserve(entry.target);
           }
         });
       },
       { threshold: 0.12, rootMargin: '0px 0px -8% 0px' }
     );
 
-    els.forEach((el) => obs.observe(el));
-    observer.current = obs;
+    observer.current = intersectionObserver;
+    revealElements();
 
-    return () => obs.disconnect();
+    const mutationObserver = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (node instanceof HTMLElement) revealElements(node);
+        });
+      });
+    });
+
+    mutationObserver.observe(document.body, { childList: true, subtree: true });
+
+    return () => {
+      mutationObserver.disconnect();
+      intersectionObserver.disconnect();
+      observer.current = null;
+    };
   }, []);
 }

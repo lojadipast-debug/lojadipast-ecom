@@ -54,6 +54,7 @@ export function CartPage() {
       </h1>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_380px]">
+        {/* items */}
         <div className="reveal flex flex-col gap-4">
           {items.map((item) => (
             <div
@@ -134,10 +135,12 @@ export function CartPage() {
           </div>
         </div>
 
+        {/* summary */}
         <aside className="reveal lg:sticky lg:top-28 lg:self-start">
           <div className="rounded-3xl bg-white p-6 ring-1 ring-ink-100 shadow-soft">
             <h2 className="font-display text-lg font-semibold text-ink-900">Resumo</h2>
 
+            {/* coupon */}
             <form onSubmit={applyCoupon} className="mt-4">
               <label className="text-xs font-semibold uppercase tracking-wider text-ink-500">
                 Código de desconto
@@ -162,6 +165,7 @@ export function CartPage() {
               {error && <p className="mt-2 text-xs text-rose-600">{error}</p>}
             </form>
 
+            {/* shipping estimate */}
             <div className="mt-5 border-t border-ink-100 pt-5">
               <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-500">
                 Estimativa de envio
@@ -172,6 +176,7 @@ export function CartPage() {
               </div>
             </div>
 
+            {/* totals */}
             <dl className="mt-5 flex flex-col gap-2 border-t border-ink-100 pt-5 text-sm">
               <div className="flex justify-between">
                 <dt className="text-ink-600">Subtotal</dt>

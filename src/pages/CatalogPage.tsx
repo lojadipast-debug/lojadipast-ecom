@@ -250,9 +250,14 @@ export function CatalogPage({ category }: { category?: string }) {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 xl:grid-cols-4">
+            <div
+              key={`grid-${selectedCats.size}-${selectedAges.size}-${selectedBrands.size}-${selectedColors.size}-${selectedSizes.size}-${onlyPromo}-${onlyNew}-${sort}`}
+              className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 xl:grid-cols-4"
+            >
               {filtered.map((p, i) => (
-                <ProductCard key={p.id} product={p} index={i} />
+                <div key={p.id} className="animate-fade-in-up" style={{ animationDelay: `${Math.min(i * 40, 400)}ms` }}>
+                  <ProductCard product={p} index={i} />
+                </div>
               ))}
             </div>
           )}

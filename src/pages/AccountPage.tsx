@@ -27,8 +27,16 @@ const SECTIONS = [
 
 export function AccountPage({ section }: { section: string }) {
   useScrollReveal();
-  const { user, orders, ordersLoading, addresses, logout } = useAccount();
+  const { user, loading, orders, ordersLoading, addresses, logout } = useAccount();
   const { navigate } = useRouter();
+
+  if (loading) {
+    return (
+      <div className="container-x flex items-center justify-center py-24">
+        <Loader2 size={28} className="animate-spin text-ink-300" />
+      </div>
+    );
+  }
 
   if (!user) {
     return <AuthScreen />;
@@ -265,19 +273,25 @@ function AuthScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    const res =
-      mode === 'login'
-        ? login(email, password)
-        : register(name, email, password);
-    if (!res.ok) {
-      setError(res.error ?? 'Algo correu mal.');
-      return;
+    setSubmitting(true);
+    try {
+      const res =
+        mode === 'login'
+          ? await login(email, password)
+          : await register(name, email, password);
+      if (!res.ok) {
+        setError(res.error ?? 'Algo correu mal.');
+        return;
+      }
+      navigate('/conta/perfil');
+    } finally {
+      setSubmitting(false);
     }
-    navigate('/conta/perfil');
   };
 
   return (
@@ -321,8 +335,8 @@ function AuthScreen() {
 
             {error && <p className="text-sm text-rose-600">{error}</p>}
 
-            <button type="submit" className="btn-primary w-full">
-              {mode === 'login' ? 'Entrar' : 'Criar conta'} <ChevronRight size={16} />
+            <button type="submit" disabled={submitting} className="btn-primary w-full disabled:opacity-60">
+              {submitting ? 'A processar…' : (mode === 'login' ? 'Entrar' : 'Criar conta')} <ChevronRight size={16} />
             </button>
 
             {mode === 'login' && (

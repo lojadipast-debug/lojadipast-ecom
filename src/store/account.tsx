@@ -28,17 +28,17 @@ export interface AccountOrder {
 
 interface AccountContextValue {
   user: AccountUser | null;
+  loading: boolean;
   addresses: AccountAddress[];
   orders: AccountOrder[];
   ordersLoading: boolean;
   refreshOrders: () => Promise<void>;
-  login: (email: string, password: string) => { ok: boolean; error?: string };
-  register: (name: string, email: string, password: string) => { ok: boolean; error?: string };
-  logout: () => void;
+  login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  register: (name: string, email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  logout: () => Promise<void>;
 }
 
 const AccountContext = createContext<AccountContextValue | null>(null);
-const USER_KEY = 'dipa-user';
 
 const DEMO_ADDRESSES: AccountAddress[] = [
   {
@@ -52,31 +52,37 @@ const DEMO_ADDRESSES: AccountAddress[] = [
   },
 ];
 
-function readStored<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
+function nameFromEmail(email: string): string {
+  const name = email.split('@')[0].replace(/[._-]/g, ' ');
+  return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
 export function AccountProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AccountUser | null>(() =>
-    readStored<AccountUser | null>(USER_KEY, null)
-  );
+  const [user, setUser] = useState<AccountUser | null>(null);
+  const [loading, setLoading] = useState(true);
   const [addresses] = useState<AccountAddress[]>(DEMO_ADDRESSES);
   const [orders, setOrders] = useState<AccountOrder[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
 
   useEffect(() => {
-    if (user) localStorage.setItem(USER_KEY, JSON.stringify(user));
-    else localStorage.removeItem(USER_KEY);
-  }, [user]);
+    supabase.auth.onAuthStateChange((_event, session) => {
+      (async () => {
+        if (session?.user) {
+          const meta = session.user.user_metadata as Record<string, string> | null;
+          const name = meta?.name ?? nameFromEmail(session.user.email ?? '');
+          setUser({ name, email: session.user.email ?? '' });
+          await refreshOrdersFor(session.user.email ?? '');
+        } else {
+          setUser(null);
+          setOrders([]);
+        }
+        setLoading(false);
+      })();
+    });
+  }, []);
 
-  const refreshOrders = useCallback(async () => {
-    if (!user?.email) {
+  const refreshOrdersFor = useCallback(async (email: string) => {
+    if (!email) {
       setOrders([]);
       return;
     }
@@ -85,7 +91,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       const { data, error } = await supabase
         .from('orders')
         .select('id, created_at, total, status, order_items(product_name, quantity, product_id)')
-        .eq('customer_email', user.email)
+        .eq('customer_email', email)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -112,37 +118,71 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     } finally {
       setOrdersLoading(false);
     }
-  }, [user?.email]);
+  }, []);
 
-  useEffect(() => {
-    refreshOrders();
-  }, [refreshOrders]);
+  const refreshOrders = useCallback(async () => {
+    if (user?.email) await refreshOrdersFor(user.email);
+    else setOrders([]);
+  }, [user?.email, refreshOrdersFor]);
 
-  const login: AccountContextValue['login'] = (email, password) => {
+  const login: AccountContextValue['login'] = async (email, password) => {
     if (!email || !password) return { ok: false, error: 'Preenche email e palavra-passe.' };
-    if (password.length < 4)
-      return { ok: false, error: 'A palavra-passe deve ter pelo menos 4 caracteres.' };
-    const name = email.split('@')[0].replace(/[._-]/g, ' ');
-    setUser({
-      name: name.charAt(0).toUpperCase() + name.slice(1),
-      email,
-    });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      return { ok: false, error: 'Email ou palavra-passe incorretos.' };
+    }
+    if (data.user) {
+      const meta = data.user.user_metadata as Record<string, string> | null;
+      const name = meta?.name ?? nameFromEmail(data.user.email ?? '');
+      setUser({ name, email: data.user.email ?? '' });
+    }
     return { ok: true };
   };
 
-  const register: AccountContextValue['register'] = (name, email, password) => {
+  const register: AccountContextValue['register'] = async (name, email, password) => {
     if (!name || !email || !password) return { ok: false, error: 'Preenche todos os campos.' };
-    if (password.length < 4)
-      return { ok: false, error: 'A palavra-passe deve ter pelo menos 4 caracteres.' };
-    setUser({ name, email });
+    if (password.length < 6)
+      return { ok: false, error: 'A palavra-passe deve ter pelo menos 6 caracteres.' };
+
+    try {
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/register-user`;
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ email, password, name }),
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        return { ok: false, error: body.error ?? 'Erro ao criar conta.' };
+      }
+    } catch {
+      return { ok: false, error: 'Erro ao criar conta. Tenta novamente.' };
+    }
+
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      return { ok: false, error: 'Conta criada, mas não foi possível iniciar sessão. Tenta fazer login.' };
+    }
+    if (data.user) {
+      const meta = data.user.user_metadata as Record<string, string> | null;
+      const displayName = meta?.name ?? name ?? nameFromEmail(data.user.email ?? '');
+      setUser({ name: displayName, email: data.user.email ?? email });
+    }
     return { ok: true };
   };
 
-  const logout = () => setUser(null);
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setOrders([]);
+  }, []);
 
   return (
     <AccountContext.Provider
-      value={{ user, addresses, orders, ordersLoading, refreshOrders, login, register, logout }}
+      value={{ user, loading, addresses, orders, ordersLoading, refreshOrders, login, register, logout }}
     >
       {children}
     </AccountContext.Provider>

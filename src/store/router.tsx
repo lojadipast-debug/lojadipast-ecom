@@ -48,6 +48,7 @@ export function parseRoute(path: string): Route {
     return { name: 'product', id: segments[1] };
   if (segments[0] === 'carrinho') return { name: 'cart' };
   if (segments[0] === 'checkout') return { name: 'checkout' };
+  if (segments[0] === 'checkout-success') return { name: 'checkout-success' };
   if (segments[0] === 'conta') return { name: 'account', section: segments[1] ?? 'perfil' };
   return { name: 'home' };
 }
@@ -58,4 +59,5 @@ export type Route =
   | { name: 'product'; id: string }
   | { name: 'cart' }
   | { name: 'checkout' }
+  | { name: 'checkout-success' }
   | { name: 'account'; section: string };

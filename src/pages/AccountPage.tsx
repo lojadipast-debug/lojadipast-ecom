@@ -1,3 +1,8 @@
+Este é o ficheiro **`src/pages/AccountPage.tsx`** limpo e corrigido (revolvi a duplicação do código que tinha sido colada duas vezes seguidas).
+
+Pode selecionar **todo o conteúdo** do seu ficheiro `src/pages/AccountPage.tsx`, apagar e colar este bloco diretamente:
+
+```tsx
 import { useState } from 'react';
 import {
   User as UserIcon,
@@ -198,7 +203,7 @@ export function AccountPage({ section }: { section: string }) {
 }
 
 function FavoritesSection() {
-  const { favorites, toggleFavorite } = useCart();
+  const { favorites } = useCart();
   const products = favorites.map(getProductById).filter((p): p is NonNullable<typeof p> => Boolean(p));
 
   if (products.length === 0) {
@@ -354,3 +359,5 @@ function AuthScreen() {
     </div>
   );
 }
+
+```

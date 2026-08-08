@@ -12,6 +12,7 @@ import { CatalogPage } from '@/pages/CatalogPage';
 import { ProductPage } from '@/pages/ProductPage';
 import { CartPage } from '@/pages/CartPage';
 import { CheckoutPage } from '@/pages/CheckoutPage';
+import { CheckoutSuccessPage } from '@/pages/CheckoutSuccessPage';
 import { AccountPage } from '@/pages/AccountPage';
 
 function AppRoutes() {
@@ -32,6 +33,7 @@ function AppRoutes() {
         {route.name === 'product' && <ProductPage id={route.id} />}
         {route.name === 'cart' && <CartPage />}
         {route.name === 'checkout' && <CheckoutPage />}
+        {route.name === 'checkout-success' && <CheckoutSuccessPage />}
         {route.name === 'account' && <AccountPage section={route.section} />}
       </main>
       <Footer />
@@ -54,6 +56,8 @@ function titleFor(route: ReturnType<typeof parseRoute>): string {
       return 'Carrinho · Dipa';
     case 'checkout':
       return 'Checkout · Dipa';
+    case 'checkout-success':
+      return 'Encomenda confirmada · Dipa';
     case 'account':
       return 'A minha conta · Dipa';
   }

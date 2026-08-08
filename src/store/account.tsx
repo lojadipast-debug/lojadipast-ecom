@@ -145,33 +145,27 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       return { ok: false, error: 'A palavra-passe deve ter pelo menos 6 caracteres.' };
 
     try {
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/register-user`;
-      const res = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      // Registo direto através do SDK oficial do Supabase
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { name },
         },
-        body: JSON.stringify({ email, password, name }),
       });
-      const body = await res.json();
-      if (!res.ok) {
-        return { ok: false, error: body.error ?? 'Erro ao criar conta.' };
+
+      if (error) {
+        return { ok: false, error: error.message || 'Erro ao criar conta.' };
       }
+
+      if (data.user) {
+        setUser({ name, email });
+      }
+
+      return { ok: true };
     } catch {
       return { ok: false, error: 'Erro ao criar conta. Tenta novamente.' };
     }
-
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      return { ok: false, error: 'Conta criada, mas não foi possível iniciar sessão. Tenta fazer login.' };
-    }
-    if (data.user) {
-      const meta = data.user.user_metadata as Record<string, string> | null;
-      const displayName = meta?.name ?? name ?? nameFromEmail(data.user.email ?? '');
-      setUser({ name: displayName, email: data.user.email ?? email });
-    }
-    return { ok: true };
   };
 
   const logout = useCallback(async () => {

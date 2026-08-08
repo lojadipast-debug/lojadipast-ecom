@@ -98,7 +98,8 @@ export const PRODUCTS: Product[] = [
       'https://images.pexels.com/photos/28259747/pexels-photo-28259747.jpeg?auto=compress&cs=tinysrgb&h=900&w=700',
       'https://images.pexels.com/photos/14642652/pexels-photo-14642652.jpeg?auto=compress&cs=tinysrgb&h=900&w=700',
     ],
-    description: 'Conjunto de algodão orgânico extra suave, pensado para a pele sensível dos primeiros dias. Composição respirável e costuras planas que não marcam.',
+    description:
+      'Conjunto de algodão orgânico extra suave, pensado para a pele sensível dos primeiros dias. Composição respirável e costuras planas que não marcam.',
     details: ['100% algodão orgânico GOTS', 'Botões de pressão em nacre', 'Lavável a 30°C', 'Costuras planas'],
     rating: 4.9,
     reviewsCount: 128,
@@ -120,7 +121,8 @@ export const PRODUCTS: Product[] = [
       'https://images.pexels.com/photos/20433620/pexels-photo-20433620.jpeg?auto=compress&cs=tinysrgb&h=900&w=700',
       'https://images.pexels.com/photos/37638214/pexels-photo-37638214.jpeg?auto=compress&cs=tinysrgb&h=900&w=700',
     ],
-    description: 'Vestido em tule suave com forro de algodão. Movimento leve e festivo, perfeito para dias especiais.',
+    description:
+      'Vestido em tule suave com forro de algodão. Movimento leve e festivo, perfeito para dias especiais.',
     details: ['Tule sem risco', 'Forro 100% algodão', 'Fecho nas costas com laço', 'Lavagem delicada'],
     rating: 4.8,
     reviewsCount: 86,
@@ -141,7 +143,8 @@ export const PRODUCTS: Product[] = [
       'https://images.pexels.com/photos/14641436/pexels-photo-14641436.jpeg?auto=compress&cs=tinysrgb&h=900&w=700',
       'https://images.pexels.com/photos/30569741/pexels-photo-30569741.jpeg?auto=compress&cs=tinysrgb&h=900&w=700',
     ],
-    description: 'Camisola de tricot quentinha com padrão discreto. Confortável para os dias frescos de outono.',
+    description:
+      'Camisola de tricot quentinha com padrão discreto. Confortável para os dias frescos de outono.',
     details: ['Mistura de lã merino', 'Não pica', 'Botões em madeira', 'Lavável à mão'],
     rating: 4.7,
     reviewsCount: 54,
@@ -163,7 +166,8 @@ export const PRODUCTS: Product[] = [
       'https://images.pexels.com/photos/14017533/pexels-photo-14017533.jpeg?auto=compress&cs=tinysrgb&h=900&w=700',
       'https://images.pexels.com/photos/4910501/pexels-photo-4910501.jpeg?auto=compress&cs=tinysrgb&h=900&w=700',
     ],
-    description: 'Mochila leve com alças acolchoadas e orelhinhas de coelho. O tamanho ideal para os primeiros anos de escola.',
+    description:
+      'Mochila leve com alças acolchoadas e orelhinhas de coelho. O tamanho ideal para os primeiros anos de escola.',
     details: ['Tecido à prova de água', 'Alças acolchoadas', 'Bolso frontal', '49 cm de altura'],
     rating: 4.9,
     reviewsCount: 212,
@@ -185,7 +189,8 @@ export const PRODUCTS: Product[] = [
       'https://images.pexels.com/photos/1974656/pexels-photo-1974656.jpeg?auto=compress&cs=tinysrgb&h=900&w=700',
       'https://images.pexels.com/photos/29279957/pexels-photo-29279957.jpeg?auto=compress&cs=tinysrgb&h=900&w=700',
     ],
-    description: 'Pelúcia hipoalergénica com enchimento reciclado. O companheiro macio para abraços sem fim.',
+    description:
+      'Pelúcia hipoalergénica com enchimento reciclado. O companheiro macio para abraços sem fim.',
     details: ['Enchimento reciclado', 'Tecido certificado OEKO-TEX', 'Lavável à máquina 30°C', 'Sem peças pequenas'],
     rating: 5.0,
     reviewsCount: 167,
@@ -208,7 +213,8 @@ export const PRODUCTS: Product[] = [
       'https://images.pexels.com/photos/30395128/pexels-photo-30395128.jpeg?auto=compress&cs=tinysrgb&h=900&w=700',
       'https://images.pexels.com/photos/22484673/pexels-photo-22484673.jpeg?auto=compress&cs=tinysrgb&h=900&w=700',
     ],
-    description: 'Sapatilhas leves com sola flexível anti-derrapante. Acompanham os primeiros passos com segurança.',
+    description:
+      'Sapatilhas leves com sola flexível anti-derrapante. Acompanham os primeiros passos com segurança.',
     details: ['Sola em TPR flexível', 'Pelica certificada', 'Fecho elástico', 'Palmilha amovível'],
     rating: 4.6,
     reviewsCount: 73,

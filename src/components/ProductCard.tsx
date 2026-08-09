@@ -85,8 +85,8 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
         onClick={() =>
           addToCart({
             productId: product.id,
-            size: product.sizes[0],
-            color: product.colors[0].name,
+            size: product.sizes[0] ?? 'Único',
+            color: product.colors[0]?.name ?? 'Padrão',
             quantity: 1,
           })
         }

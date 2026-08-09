@@ -5,6 +5,7 @@ export function StoreLocation() {
   return (
     <section className="container-x mt-24">
       <div className="reveal overflow-hidden rounded-4xl bg-cream-100 lg:grid lg:grid-cols-2">
+        {/* photo */}
         <div className="relative h-72 overflow-hidden lg:h-auto">
           <img
             src={lojaImg}
@@ -14,6 +15,7 @@ export function StoreLocation() {
           <div className="absolute inset-0 bg-gradient-to-t from-ink-900/30 to-transparent" />
         </div>
 
+        {/* info */}
         <div className="flex flex-col justify-center gap-6 p-8 sm:p-12">
           <div>
             <p className="section-eyebrow">Visita-nos</p>

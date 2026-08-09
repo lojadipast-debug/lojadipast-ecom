@@ -23,6 +23,7 @@ export function Reviews() {
         </div>
       </div>
 
+      {/* horizontal scroll with edge fade */}
       <div className="reveal mask-fade-x mt-10 overflow-x-auto pb-4 no-scrollbar">
         <div className="flex gap-5 px-6">
           {REVIEWS.map((review) => (
@@ -52,6 +53,7 @@ export function Reviews() {
               </figcaption>
             </figure>
           ))}
+          {/* trailing spacer for fade */}
           <div className="w-2 shrink-0" aria-hidden />
         </div>
       </div>

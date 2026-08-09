@@ -7,9 +7,11 @@ export function PromoBanner() {
   return (
     <section className="container-x mt-24">
       <div className="reveal grid gap-5 lg:grid-cols-3">
+        {/* big promo */}
         <div className="relative overflow-hidden rounded-5xl bg-gradient-to-br from-rose-200 via-cream-100 to-lilac-200 p-10 sm:p-12 lg:col-span-2">
           <div className="absolute -right-12 -top-12 h-56 w-56 rounded-full bg-rose-300/50 blur-3xl" />
           <div className="absolute -bottom-16 left-1/3 h-48 w-48 rounded-full bg-lilac-300/50 blur-3xl" />
+          {/* rotating badge */}
           <div className="absolute right-8 top-8 z-10 hidden h-24 w-24 animate-spin-slow items-center justify-center rounded-full bg-rose-500 text-white shadow-soft-lg sm:flex">
             <div className="text-center leading-none">
               <div className="font-display text-2xl font-extrabold">-30%</div>
@@ -46,6 +48,7 @@ export function PromoBanner() {
           />
         </div>
 
+        {/* small promo */}
         <div className="relative overflow-hidden rounded-5xl bg-sky-200 p-10">
           <div className="absolute -bottom-8 -left-8 h-40 w-40 rounded-full bg-sky-300/60 blur-2xl" />
           <span className="chip relative inline-flex items-center gap-1.5 bg-white/70 ring-sky-300 text-sky-700">

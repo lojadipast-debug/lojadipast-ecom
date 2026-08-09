@@ -8,6 +8,7 @@ const BRANDS = [
 ];
 
 export function Brands() {
+  // duplicate for seamless marquee
   const loop = [...BRANDS, ...BRANDS];
 
   return (

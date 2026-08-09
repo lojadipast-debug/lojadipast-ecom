@@ -22,11 +22,13 @@ export function ProductSection({ title, eyebrow, filter, cta, ctaTo }: Props) {
     <section className="container-x mt-24">
       {isPromo ? (
         <div className="reveal relative overflow-hidden rounded-4xl bg-gradient-to-r from-rose-500 via-orange-400 to-amber-400 p-8 sm:p-10">
+          {/* glow blobs */}
           <div className="pointer-events-none absolute -left-10 -top-10 h-48 w-48 rounded-full bg-white/20 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-10 right-20 h-40 w-40 rounded-full bg-amber-300/40 blur-2xl" />
 
           <div className="relative flex flex-wrap items-center justify-between gap-5">
             <div className="flex items-center gap-5">
+              {/* fire icon block */}
               <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl bg-white/20 backdrop-blur-sm ring-2 ring-white/30 shadow-soft-lg">
                 <Flame size={30} className="text-white drop-shadow" />
               </div>

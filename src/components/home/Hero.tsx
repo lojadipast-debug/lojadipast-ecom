@@ -6,6 +6,7 @@ export function Hero() {
 
   return (
     <section className="relative w-full">
+      {/* full-bleed image background */}
       <div className="absolute inset-0">
         <img
           src="https://images.pexels.com/photos/18447782/pexels-photo-18447782.jpeg?auto=compress&cs=tinysrgb&w=1920"
@@ -16,6 +17,7 @@ export function Hero() {
         <div className="absolute inset-0 bg-gradient-to-t from-ink-900/35 via-transparent to-transparent" />
       </div>
 
+      {/* floating decorative blobs */}
       <div className="pointer-events-none absolute right-[18%] top-[22%] hidden h-32 w-32 animate-float rounded-full bg-lilac-300/40 blur-2xl lg:block" />
       <div className="pointer-events-none absolute right-[8%] bottom-[28%] hidden h-40 w-40 animate-float-soft rounded-full bg-rose-300/40 blur-3xl lg:block" />
       <Sparkles className="pointer-events-none absolute right-[14%] top-[16%] hidden animate-float text-lilac-400/90 lg:block" size={30} />
@@ -52,6 +54,7 @@ export function Hero() {
         </div>
       </div>
 
+      {/* scroll cue */}
       <div className="absolute bottom-6 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-2 text-ink-600 lg:flex">
         <span className="text-[10px] font-bold uppercase tracking-[0.3em]">Descobrir</span>
         <span className="flex h-9 w-5 justify-center rounded-full border-2 border-ink-400 p-1">

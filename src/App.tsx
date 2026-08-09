@@ -14,6 +14,7 @@ import { CartPage } from '@/pages/CartPage';
 import { CheckoutPage } from '@/pages/CheckoutPage';
 import { CheckoutSuccessPage } from '@/pages/CheckoutSuccessPage';
 import { AccountPage } from '@/pages/AccountPage';
+import { AdminPage } from '@/pages/AdminPage';
 
 function AppRoutes() {
   const { path } = useRouter();
@@ -35,6 +36,7 @@ function AppRoutes() {
         {route.name === 'checkout' && <CheckoutPage />}
         {route.name === 'checkout-success' && <CheckoutSuccessPage />}
         {route.name === 'account' && <AccountPage section={route.section} />}
+        {route.name === 'admin' && <AdminPage />}
       </main>
       <Footer />
       <CartDrawer />
@@ -60,6 +62,8 @@ function titleFor(route: ReturnType<typeof parseRoute>): string {
       return 'Encomenda confirmada · Dipa';
     case 'account':
       return 'A minha conta · Dipa';
+    case 'admin':
+      return 'Painel de administração · Dipa';
   }
 }
 

@@ -57,6 +57,7 @@ export function AccountPage({ section }: { section: string }) {
       </div>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[240px_1fr]">
+        {/* sidebar */}
         <aside className="reveal">
           <nav className="flex gap-2 overflow-x-auto rounded-3xl bg-white p-2 ring-1 ring-ink-100 lg:flex-col">
             {SECTIONS.map((s) => {
@@ -86,6 +87,7 @@ export function AccountPage({ section }: { section: string }) {
           </nav>
         </aside>
 
+        {/* content */}
         <div>
           {active.key === 'perfil' && (
             <Section title="Perfil" desc="Atualiza os teus dados pessoais.">

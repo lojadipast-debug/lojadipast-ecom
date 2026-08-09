@@ -5,9 +5,6 @@ import {
   Minus,
   Plus,
   ShoppingBag,
-  Truck,
-  RefreshCw,
-  ShieldCheck,
   Check,
   ZoomIn,
 } from 'lucide-react';
@@ -30,8 +27,10 @@ export function ProductPage({ id }: { id: string }) {
   const [qty, setQty] = useState(1);
   const [zoom, setZoom] = useState(false);
   const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
-  const [tab, setTab] = useState<'desc' | 'details' | 'reviews'>('desc');
   const [added, setAdded] = useState(false);
+
+  const hasSizes = product?.sizes && product.sizes.length > 0;
+  const hasColors = product?.colors && product.colors.length > 0;
 
   if (!product) {
     return (
@@ -58,16 +57,12 @@ export function ProductPage({ id }: { id: string }) {
   };
 
   const handleAdd = () => {
-    if (!size) {
-      setSize(product.sizes[0]);
-    }
-    if (!color) {
-      setColor(product.colors[0].name);
-    }
+    if (hasSizes && !size) setSize(product.sizes[0]);
+    if (hasColors && !color) setColor(product.colors[0].name);
     addToCart({
       productId: product.id,
-      size: size || product.sizes[0],
-      color: color || product.colors[0].name,
+      size: hasSizes ? (size || product.sizes[0]) : 'Único',
+      color: hasColors ? (color || product.colors[0].name) : 'Padrão',
       quantity: qty,
     });
     setAdded(true);
@@ -152,12 +147,6 @@ export function ProductPage({ id }: { id: string }) {
 
           <div className="mt-3 flex items-center gap-3">
             <StarRating rating={product.rating} count={product.reviewsCount} size={16} />
-            <button
-              onClick={() => setTab('reviews')}
-              className="text-sm text-ink-500 underline-offset-2 hover:underline"
-            >
-              Ver avaliações
-            </button>
           </div>
 
           <div className="mt-5 flex items-end gap-3">
@@ -172,60 +161,64 @@ export function ProductPage({ id }: { id: string }) {
           </div>
 
           {/* color */}
-          <div className="mt-7">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-ink-900">Cor</p>
-              <p className="text-sm text-ink-500">{color || product.colors[0].name}</p>
+          {hasColors && (
+            <div className="mt-7">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-ink-900">Cor</p>
+                <p className="text-sm text-ink-500">{color || product.colors[0].name}</p>
+              </div>
+              <div className="mt-3 flex gap-2.5">
+                {product.colors.map((c) => {
+                  const active = (color || product.colors[0].name) === c.name;
+                  return (
+                    <button
+                      key={c.name}
+                      onClick={() => setColor(c.name)}
+                      aria-label={c.name}
+                      className={`relative h-9 w-9 rounded-full ring-2 transition-all ${
+                        active ? 'ring-lilac-500 ring-offset-2 ring-offset-cream-50' : 'ring-ink-200 hover:ring-ink-300'
+                      }`}
+                      style={{ backgroundColor: c.hex }}
+                    >
+                      {active && (
+                        <Check size={14} className="absolute inset-0 m-auto text-ink-900 mix-blend-difference" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            <div className="mt-3 flex gap-2.5">
-              {product.colors.map((c) => {
-                const active = (color || product.colors[0].name) === c.name;
-                return (
-                  <button
-                    key={c.name}
-                    onClick={() => setColor(c.name)}
-                    aria-label={c.name}
-                    className={`relative h-9 w-9 rounded-full ring-2 transition-all ${
-                      active ? 'ring-lilac-500 ring-offset-2 ring-offset-cream-50' : 'ring-ink-200 hover:ring-ink-300'
-                    }`}
-                    style={{ backgroundColor: c.hex }}
-                  >
-                    {active && (
-                      <Check size={14} className="absolute inset-0 m-auto text-ink-900 mix-blend-difference" />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          )}
 
           {/* size */}
-          <div className="mt-6">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-ink-900">Tamanho</p>
-              <button className="text-xs font-semibold text-lilac-600 hover:underline">
-                Guia de tamanhos
-              </button>
+          {hasSizes && (
+            <div className="mt-6">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-ink-900">Tamanho</p>
+                <button className="text-xs font-semibold text-lilac-600 hover:underline">
+                  Guia de tamanhos
+                </button>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {product.sizes.map((s) => {
+                  const active = (size || product.sizes[0]) === s;
+                  return (
+                    <button
+                      key={s}
+                      onClick={() => setSize(s)}
+                      className={`min-w-12 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all ${
+                        active
+                          ? 'bg-ink-900 text-white shadow-soft'
+                          : 'bg-white text-ink-700 ring-1 ring-ink-200 hover:ring-lilac-300'
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {product.sizes.map((s) => {
-                const active = (size || product.sizes[0]) === s;
-                return (
-                  <button
-                    key={s}
-                    onClick={() => setSize(s)}
-                    className={`min-w-12 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all ${
-                      active
-                        ? 'bg-ink-900 text-white shadow-soft'
-                        : 'bg-white text-ink-700 ring-1 ring-ink-200 hover:ring-lilac-300'
-                    }`}
-                  >
-                    {s}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          )}
 
           {/* quantity + add */}
           <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -272,56 +265,10 @@ export function ProductPage({ id }: { id: string }) {
             </button>
           </div>
 
-          {/* reassurance */}
-          <div className="mt-8 grid grid-cols-3 gap-3 rounded-3xl bg-white p-4 ring-1 ring-ink-100">
-            {[
-              { Icon: Truck, t: 'Envio 24-48h' },
-              { Icon: RefreshCw, t: 'Trocas 30 dias' },
-              { Icon: ShieldCheck, t: 'Pagamento seguro' },
-            ].map(({ Icon, t }) => (
-              <div key={t} className="flex flex-col items-center gap-1.5 text-center">
-                <Icon size={18} className="text-lilac-600" />
-                <span className="text-[11px] font-medium text-ink-600">{t}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* tabs */}
+          {/* description */}
           <div className="mt-8">
-            <div className="flex gap-1 border-b border-ink-100">
-              {([
-                ['desc', 'Descrição'],
-                ['details', 'Detalhes'],
-                ['reviews', `Avaliações (${product.reviewsCount})`],
-              ] as const).map(([key, label]) => (
-                <button
-                  key={key}
-                  onClick={() => setTab(key)}
-                  className={`relative px-4 py-3 text-sm font-semibold transition-colors ${
-                    tab === key ? 'text-ink-900' : 'text-ink-400 hover:text-ink-600'
-                  }`}
-                >
-                  {label}
-                  {tab === key && (
-                    <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-lilac-500" />
-                  )}
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-5 text-sm leading-relaxed text-ink-600">
-              {tab === 'desc' && <p>{product.description}</p>}
-              {tab === 'details' && (
-                <ul className="flex flex-col gap-2">
-                  {product.details.map((d) => (
-                    <li key={d} className="flex items-center gap-2.5">
-                      <Check size={15} className="text-sky-600" /> {d}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {tab === 'reviews' && <ReviewsBlock rating={product.rating} count={product.reviewsCount} />}
-            </div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-ink-500">Descrição</p>
+            <p className="mt-3 text-sm leading-relaxed text-ink-600">{product.description}</p>
           </div>
         </div>
       </div>
@@ -343,55 +290,4 @@ export function ProductPage({ id }: { id: string }) {
   );
 }
 
-function ReviewsBlock({ rating, count }: { rating: number; count: number }) {
-  const sample = [
-    { name: 'Catarina F.', rating: 5, text: 'Qualidade incrível e entrega rápida. Recomendo!', date: 'Há 2 semanas' },
-    { name: 'Rui M.', rating: 5, text: 'Exatamente como na foto. Tecido muito macio.', date: 'Há 1 mês' },
-    { name: 'Ana P.', rating: 4, text: 'Linda peça, só achei o tamanho um pouco pequeno.', date: 'Há 2 meses' },
-  ];
-  return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col items-center gap-2 rounded-3xl bg-cream-100 p-6 text-center sm:flex-row sm:justify-around sm:text-left">
-        <div>
-          <p className="font-display text-4xl font-semibold text-ink-900">{rating.toFixed(1)}</p>
-          <StarRating rating={rating} size={16} className="mt-1" />
-          <p className="mt-1 text-xs text-ink-500">{count} avaliações</p>
-        </div>
-        <div className="flex w-full max-w-xs flex-col gap-1.5">
-          {[5, 4, 3, 2, 1].map((star) => {
-            const pct = star === 5 ? 82 : star === 4 ? 14 : star === 3 ? 3 : star === 2 ? 1 : 0;
-            return (
-              <div key={star} className="flex items-center gap-2">
-                <span className="w-3 text-xs text-ink-500">{star}</span>
-                <div className="h-2 flex-1 overflow-hidden rounded-full bg-ink-200">
-                  <div className="h-full rounded-full bg-cream-400" style={{ width: `${pct}%` }} />
-                </div>
-                <span className="w-8 text-right text-xs text-ink-400">{pct}%</span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
 
-      <ul className="flex flex-col gap-4">
-        {sample.map((r) => (
-          <li key={r.name} className="rounded-2xl bg-white p-4 ring-1 ring-ink-100">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="grid h-9 w-9 place-items-center rounded-full bg-lilac-100 font-display font-semibold text-lilac-700">
-                  {r.name.charAt(0)}
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-ink-900">{r.name}</p>
-                  <p className="text-xs text-ink-400">{r.date}</p>
-                </div>
-              </div>
-              <StarRating rating={r.rating} size={13} />
-            </div>
-            <p className="mt-3 text-sm text-ink-600">{r.text}</p>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}

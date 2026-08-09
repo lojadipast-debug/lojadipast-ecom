@@ -50,6 +50,7 @@ export function parseRoute(path: string): Route {
   if (segments[0] === 'checkout') return { name: 'checkout' };
   if (segments[0] === 'checkout-success') return { name: 'checkout-success' };
   if (segments[0] === 'conta') return { name: 'account', section: segments[1] ?? 'perfil' };
+  if (segments[0] === 'admin') return { name: 'admin' };
   return { name: 'home' };
 }
 
@@ -60,4 +61,5 @@ export type Route =
   | { name: 'cart' }
   | { name: 'checkout' }
   | { name: 'checkout-success' }
-  | { name: 'account'; section: string };
+  | { name: 'account'; section: string }
+  | { name: 'admin' };

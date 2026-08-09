@@ -6,6 +6,7 @@ import { getProductById } from '@/data/catalog';
 export interface AccountUser {
   name: string;
   email: string;
+  isAdmin: boolean;
 }
 
 export interface AccountAddress {
@@ -65,20 +66,64 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const [ordersLoading, setOrdersLoading] = useState(false);
 
   useEffect(() => {
-    supabase.auth.onAuthStateChange((_event, session) => {
-      (async () => {
-        if (session?.user) {
-          const meta = session.user.user_metadata as Record<string, string> | null;
-          const name = meta?.name ?? nameFromEmail(session.user.email ?? '');
-          setUser({ name, email: session.user.email ?? '' });
-          await refreshOrdersFor(session.user.email ?? '');
-        } else {
-          setUser(null);
-          setOrders([]);
+    let mounted = true;
+    let settled = false;
+
+    const finish = () => {
+      if (!mounted || settled) return;
+      settled = true;
+      setLoading(false);
+    };
+
+    (async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (!mounted) return;
+        if (data.session?.user) {
+          const meta = data.session.user.user_metadata as Record<string, string> | null;
+          const appMeta = data.session.user.app_metadata as Record<string, string> | null;
+          const name = meta?.name ?? nameFromEmail(data.session.user.email ?? '');
+          const isAdmin = appMeta?.role === 'admin';
+          setUser({ name, email: data.session.user.email ?? '', isAdmin });
+          refreshOrdersFor(data.session.user.email ?? '');
         }
-        setLoading(false);
-      })();
-    });
+        finish();
+      } catch {
+        finish();
+      }
+    })();
+
+    let sub: { subscription: { unsubscribe: () => void } } | undefined;
+    try {
+      const result = supabase.auth.onAuthStateChange((_event, session) => {
+        if (!mounted) return;
+        (async () => {
+          if (session?.user) {
+            const meta = session.user.user_metadata as Record<string, string> | null;
+            const appMeta = session.user.app_metadata as Record<string, string> | null;
+            const name = meta?.name ?? nameFromEmail(session.user.email ?? '');
+            const isAdmin = appMeta?.role === 'admin';
+            setUser({ name, email: session.user.email ?? '', isAdmin });
+            await refreshOrdersFor(session.user.email ?? '');
+          } else {
+            setUser(null);
+            setOrders([]);
+          }
+          finish();
+        })();
+      });
+      sub = result.data;
+    } catch {
+      finish();
+    }
+
+    const timeout = setTimeout(finish, 4000);
+
+    return () => {
+      mounted = false;
+      clearTimeout(timeout);
+      sub?.subscription.unsubscribe();
+    };
   }, []);
 
   const refreshOrdersFor = useCallback(async (email: string) => {
@@ -133,8 +178,10 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     }
     if (data.user) {
       const meta = data.user.user_metadata as Record<string, string> | null;
+      const appMeta = data.user.app_metadata as Record<string, string> | null;
       const name = meta?.name ?? nameFromEmail(data.user.email ?? '');
-      setUser({ name, email: data.user.email ?? '' });
+      const isAdmin = appMeta?.role === 'admin';
+      setUser({ name, email: data.user.email ?? '', isAdmin });
     }
     return { ok: true };
   };
@@ -159,7 +206,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       }
 
       if (data.user) {
-        setUser({ name, email });
+        const appMeta = data.user.app_metadata as Record<string, string> | null;
+        setUser({ name, email, isAdmin: appMeta?.role === 'admin' });
       }
 
       return { ok: true };

@@ -148,6 +148,12 @@ export function AdminPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (form.images.length >= 5) {
+      setSaveState('error');
+      setSaveMessage('Limite máximo de 5 imagens atingido.');
+      return;
+    }
+
     setImageUploading(true);
     setSaveState('idle');
     setSaveMessage('');
@@ -165,9 +171,10 @@ export function AdminPage() {
 
       const { data: urlData } = supabase.storage.from('products').getPublicUrl(filePath);
 
+      // CORREÇÃO: Adiciona a nova imagem ao final da lista sem sobrescrever a principal
       setForm((prev) => ({
         ...prev,
-        images: [urlData.publicUrl, ...prev.images.filter((_, i) => i > 0)].slice(0, 5),
+        images: [...prev.images, urlData.publicUrl].slice(0, 5),
       }));
       setSaveState('success');
       setSaveMessage('Imagem carregada com sucesso!');
@@ -385,7 +392,7 @@ export function AdminPage() {
               {/* Image upload */}
               <div>
                 <span className="text-xs font-semibold uppercase tracking-wider text-ink-500">
-                  Imagem principal
+                  Imagens ({form.images.length}/5)
                 </span>
                 <div className="mt-1.5 flex flex-col gap-3 sm:flex-row sm:items-start">
                   <div className="h-32 w-32 shrink-0 overflow-hidden rounded-2xl bg-cream-100 ring-1 ring-ink-200">
@@ -406,7 +413,7 @@ export function AdminPage() {
                         </>
                       ) : (
                         <>
-                          <Upload size={18} /> Selecionar imagem
+                          <Upload size={18} /> Adicionar imagem
                         </>
                       )}
                       <input
@@ -415,33 +422,27 @@ export function AdminPage() {
                         accept="image/*"
                         onChange={handleImageUpload}
                         className="hidden"
-                        disabled={imageUploading}
+                        disabled={imageUploading || form.images.length >= 5}
                       />
                     </label>
-                    {form.images.length > 1 && (
-                      <div className="flex gap-2 overflow-x-auto">
-                        {form.images.slice(1).map((img, i) => (
-                          <div key={i} className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg ring-1 ring-ink-200">
+
+                    {/* CORREÇÃO: Mapeamento de galeria com índices corretos */}
+                    {form.images.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {form.images.map((img, idx) => (
+                          <div key={idx} className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg ring-1 ring-ink-200">
                             <img src={img} alt="" className="h-full w-full object-cover" />
                             <button
                               type="button"
-                              onClick={() => removeImage(i + 1)}
-                              className="absolute right-0 top-0 grid h-5 w-5 place-items-center rounded-bl-lg bg-ink-900/70 text-white"
+                              onClick={() => removeImage(idx)}
+                              className="absolute right-0 top-0 grid h-5 w-5 place-items-center rounded-bl-lg bg-ink-900/70 text-white hover:bg-rose-600"
+                              title="Remover"
                             >
                               <X size={11} />
                             </button>
                           </div>
                         ))}
                       </div>
-                    )}
-                    {form.images[0] && (
-                      <button
-                        type="button"
-                        onClick={() => removeImage(0)}
-                        className="text-left text-xs font-semibold text-rose-500 hover:underline"
-                      >
-                        Remover imagem principal
-                      </button>
                     )}
                   </div>
                 </div>

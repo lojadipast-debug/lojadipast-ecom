@@ -22,33 +22,34 @@ export function App() {
   }, [path]);
 
   const renderRoute = () => {
-    if (path === '/' || path === '') {
-      return <HomePage />;
-    }
-    if (path.startsWith('/catalogo')) {
+    // Normalizar o caminho
+    const currentPath = path || '/';
+
+    if (currentPath.startsWith('/catalogo')) {
       return <CatalogPage />;
     }
-    if (path.startsWith('/produto/')) {
-      const productId = path.split('/produto/')[1] || '';
+    if (currentPath.startsWith('/produto/')) {
+      const productId = currentPath.split('/produto/')[1] || '';
       return <ProductPage id={productId} />;
     }
-    if (path === '/carrinho') {
+    if (currentPath.startsWith('/carrinho') || currentPath.startsWith('/cart')) {
       return <CartPage />;
     }
-    if (path === '/checkout') {
-      return <CheckoutPage />;
-    }
-    if (path === '/checkout/sucesso') {
+    if (currentPath.startsWith('/checkout/sucesso')) {
       return <CheckoutSuccessPage />;
     }
-    if (path.startsWith('/conta')) {
-      const section = path.split('/conta/')[1] || 'perfil';
+    if (currentPath.startsWith('/checkout')) {
+      return <CheckoutPage />;
+    }
+    if (currentPath.startsWith('/conta')) {
+      const section = currentPath.split('/conta/')[1] || 'perfil';
       return <AccountPage section={section} />;
     }
-    if (path.startsWith('/admin')) {
+    if (currentPath.startsWith('/admin')) {
       return <AdminPage />;
     }
 
+    // Default para a página inicial
     return <HomePage />;
   };
 

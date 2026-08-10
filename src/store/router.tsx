@@ -24,28 +24,9 @@ export function useRouter() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  // Helpers para compatibilidade com o App
-  const currentRoute = path.startsWith('/admin')
-    ? 'admin'
-    : path.startsWith('/carrinho') || path.startsWith('/cart')
-    ? 'cart'
-    : path.startsWith('/conta')
-    ? 'account'
-    : path.startsWith('/produto/')
-    ? 'product'
-    : path.startsWith('/catalogo')
-    ? 'catalog'
-    : 'home';
-
-  const parts = path.split('/');
-  const selectedCategory = path.startsWith('/catalogo/') ? parts[2] : undefined;
-  const selectedProductId = path.startsWith('/produto/') ? parts[2] : undefined;
-
   return {
     path,
-    currentRoute,
-    selectedCategory,
-    selectedProductId,
+    currentRoute: path,
     navigate: (route: Route) => navigate(route),
   };
 }

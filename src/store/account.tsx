@@ -65,6 +65,53 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const [orders, setOrders] = useState<AccountOrder[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
 
+  const refreshOrdersFor = useCallback(async (email: string) => {
+    if (!email) {
+      setOrders([]);
+      return;
+    }
+    setOrdersLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('id, created_at, total, status, order_items(product_name, quantity, product_id)')
+        .eq('customer_email', email)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      type OrderRow = {
+        id: string;
+        created_at: string;
+        total: number;
+        status: string | null;
+        order_items: { product_name: string; quantity: number; product_id: string }[];
+      };
+
+      const mapped: AccountOrder[] = (data as OrderRow[] | null ?? []).map((row) => ({
+        id: `#${String(row.id).slice(0, 8).toUpperCase()}`,
+        date: new Date(row.created_at).toLocaleDateString('pt-PT', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        }),
+        total: Number(row.total),
+        status: row.status ?? 'Processamento',
+        items: (row.order_items ?? []).map((it) => ({
+          name: it.product_name,
+          qty: it.quantity,
+          image: getProductById(it.product_id)?.images[0] ?? '',
+        })),
+      }));
+
+      setOrders(mapped);
+    } catch {
+      setOrders([]);
+    } finally {
+      setOrdersLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     let mounted = true;
     let settled = false;
@@ -124,46 +171,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       clearTimeout(timeout);
       sub?.subscription.unsubscribe();
     };
-  }, []);
-
-  const refreshOrdersFor = useCallback(async (email: string) => {
-    if (!email) {
-      setOrders([]);
-      return;
-    }
-    setOrdersLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('orders')
-        .select('id, created_at, total, status, order_items(product_name, quantity, product_id)')
-        .eq('customer_email', email)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      const mapped: AccountOrder[] = (data ?? []).map((row: any) => ({
-        id: `#${String(row.id).slice(0, 8).toUpperCase()}`,
-        date: new Date(row.created_at).toLocaleDateString('pt-PT', {
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric',
-        }),
-        total: Number(row.total),
-        status: row.status ?? 'Processamento',
-        items: (row.order_items ?? []).map((it: any) => ({
-          name: it.product_name,
-          qty: it.quantity,
-          image: getProductById(it.product_id)?.images[0] ?? '',
-        })),
-      }));
-
-      setOrders(mapped);
-    } catch {
-      setOrders([]);
-    } finally {
-      setOrdersLoading(false);
-    }
-  }, []);
+  }, [refreshOrdersFor]);
 
   const refreshOrders = useCallback(async () => {
     if (user?.email) await refreshOrdersFor(user.email);

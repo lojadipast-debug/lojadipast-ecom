@@ -44,7 +44,6 @@ export function parseRoute(path: string): Route {
   const segments = clean.split('/').filter(Boolean);
   if (segments.length === 0) return { name: 'home' };
   
-  // Aceita /catalogo e /catalogo/qualquer-categoria
   if (segments[0] === 'catalogo') return { name: 'catalog', category: segments[1] };
   if (segments[0] === 'produto' && segments[1]) return { name: 'product', id: segments[1] };
   if (segments[0] === 'carrinho') return { name: 'cart' };

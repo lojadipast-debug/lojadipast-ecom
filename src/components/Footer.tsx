@@ -149,6 +149,14 @@ export function Footer() {
         <p className="flex items-center gap-1.5">
           Desenhado com <Heart size={12} className="fill-rose-400 text-rose-400" /> para a infância
         </p>
+        <button
+          onClick={() => navigate('/admin')}
+          className="text-ink-300 transition-colors hover:text-ink-500"
+          aria-label="Painel de administração"
+          title="Admin"
+        >
+          Admin
+        </button>
       </div>
     </footer>
   );

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from '@/store/router';
+import { CartProvider } from '@/store/cart'; // Importante para resolver o erro
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { CartDrawer } from '@/components/CartDrawer';
@@ -22,7 +23,6 @@ export function App() {
   }, [path]);
 
   const renderRoute = () => {
-    // Normalizar o caminho
     const currentPath = path || '/';
 
     if (currentPath.startsWith('/catalogo')) {
@@ -49,18 +49,19 @@ export function App() {
       return <AdminPage />;
     }
 
-    // Default para a página inicial
     return <HomePage />;
   };
 
   return (
-    <div className="min-h-screen bg-cream-50 flex flex-col font-sans text-ink-900 antialiased selection:bg-lilac-200">
-      <Header onOpenSearch={() => setSearchOpen(true)} />
-      <main className="flex-1">{renderRoute()}</main>
-      <Footer />
-      <CartDrawer />
-      <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
-    </div>
+    <CartProvider>
+      <div className="min-h-screen bg-cream-50 flex flex-col font-sans text-ink-900 antialiased selection:bg-lilac-200">
+        <Header onOpenSearch={() => setSearchOpen(true)} />
+        <main className="flex-1">{renderRoute()}</main>
+        <Footer />
+        <CartDrawer />
+        <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
+      </div>
+    </CartProvider>
   );
 }
 

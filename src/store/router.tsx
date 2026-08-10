@@ -1,45 +1,51 @@
 import { useState, useEffect } from 'react';
 
-export type Route = 'home' | 'catalog' | 'product' | 'cart' | 'account' | 'admin';
+export type Route = string;
 
-export function getRouteFromHash(): { route: Route; category?: string; productId?: string } {
-  const hash = window.location.hash.replace('#/', '').replace('#', '');
-  if (hash === 'admin') return { route: 'admin' };
-  if (hash === 'cart') return { route: 'cart' };
-  if (hash === 'conta' || hash === 'account') return { route: 'account' };
-  if (hash.startsWith('produto/')) return { route: 'product', productId: hash.split('/')[1] };
-  if (hash.startsWith('categoria/')) return { route: 'catalog', category: hash.split('/')[1] };
-  return { route: 'home' };
+function getPathFromHash(): string {
+  const hash = window.location.hash.replace('#', '');
+  return hash || '/';
 }
 
-export function navigate(route: Route, params?: { category?: string; productId?: string }) {
-  let hash = '#/';
-  if (route === 'admin') hash = '#/admin';
-  else if (route === 'cart') hash = '#/cart';
-  else if (route === 'account') hash = '#/conta';
-  else if (route === 'product' && params?.productId) hash = `#/produto/${params.productId}`;
-  else if (route === 'catalog' && params?.category) hash = `#/categoria/${params.category}`;
-
-  window.location.hash = hash;
+export function navigate(path: Route) {
+  window.location.hash = path.startsWith('/') ? path : `/${path}`;
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 export function useRouter() {
-  const [routeState, setRouteState] = useState(getRouteFromHash());
+  const [path, setPath] = useState<string>(getPathFromHash());
 
   useEffect(() => {
     const handleHashChange = () => {
-      setRouteState(getRouteFromHash());
+      setPath(getPathFromHash());
     };
 
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
+  // Helpers para compatibilidade com o App
+  const currentRoute = path.startsWith('/admin')
+    ? 'admin'
+    : path.startsWith('/carrinho') || path.startsWith('/cart')
+    ? 'cart'
+    : path.startsWith('/conta')
+    ? 'account'
+    : path.startsWith('/produto/')
+    ? 'product'
+    : path.startsWith('/catalogo')
+    ? 'catalog'
+    : 'home';
+
+  const parts = path.split('/');
+  const selectedCategory = path.startsWith('/catalogo/') ? parts[2] : undefined;
+  const selectedProductId = path.startsWith('/produto/') ? parts[2] : undefined;
+
   return {
-    currentRoute: routeState.route,
-    selectedCategory: routeState.category,
-    selectedProductId: routeState.productId,
-    navigate,
+    path,
+    currentRoute,
+    selectedCategory,
+    selectedProductId,
+    navigate: (route: Route) => navigate(route),
   };
 }

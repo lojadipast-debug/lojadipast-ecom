@@ -1,66 +1,44 @@
-import { createContext, useContext, useEffect, useState } from 'react';
-import type { ReactNode } from 'react';
+import { create } from 'zustand';
 
-interface RouterContextValue {
-  path: string;
-  navigate: (to: string) => void;
+type Route = 'home' | 'catalog' | 'product' | 'cart' | 'account' | 'admin';
+
+interface RouterStore {
+  currentRoute: Route;
+  selectedCategory?: string;
+  selectedProductId?: string;
+  navigate: (route: Route, params?: { category?: string; productId?: string }) => void;
 }
 
-const RouterContext = createContext<RouterContextValue | null>(null);
+const getInitialRoute = (): { route: Route; category?: string; productId?: string } => {
+  const hash = window.location.hash.replace('#/', '').replace('#', '');
+  if (hash === 'admin') return { route: 'admin' };
+  if (hash === 'cart') return { route: 'cart' };
+  if (hash === 'conta' || hash === 'account') return { route: 'account' };
+  if (hash.startsWith('produto/')) return { route: 'product', productId: hash.split('/')[1] };
+  if (hash.startsWith('categoria/')) return { route: 'catalog', category: hash.split('/')[1] };
+  return { route: 'home' };
+};
 
-export function RouterProvider({ children }: { children: ReactNode }) {
-  const [path, setPath] = useState<string>(() => window.location.hash.replace(/^#/, '') || '/');
+const initial = getInitialRoute();
 
-  useEffect(() => {
-    const onHash = () => {
-      setPath(window.location.hash.replace(/^#/, '') || '/');
-      window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
-    };
-    window.addEventListener('hashchange', onHash);
-    if (!window.location.hash) window.location.hash = '/';
-    return () => window.removeEventListener('hashchange', onHash);
-  }, []);
+export const useRouter = create<RouterStore>((set) => ({
+  currentRoute: initial.route,
+  selectedCategory: initial.category,
+  selectedProductId: initial.productId,
+  navigate: (route, params) => {
+    let hash = '#/';
+    if (route === 'admin') hash = '#/admin';
+    else if (route === 'cart') hash = '#/cart';
+    else if (route === 'account') hash = '#/conta';
+    else if (route === 'product' && params?.productId) hash = `#/produto/${params.productId}`;
+    else if (route === 'catalog' && params?.category) hash = `#/categoria/${params.category}`;
 
-  const navigate = (to: string) => {
-    const target = to.startsWith('#') ? to.slice(1) : to;
-    if (target === path) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-    window.location.hash = target;
-  };
-
-  return <RouterContext.Provider value={{ path, navigate }}>{children}</RouterContext.Provider>;
-}
-
-export function useRouter(): RouterContextValue {
-  const ctx = useContext(RouterContext);
-  if (!ctx) throw new Error('useRouter must be used within RouterProvider');
-  return ctx;
-}
-
-export function parseRoute(path: string): Route {
-  const clean = path.split('?')[0];
-  const segments = clean.split('/').filter(Boolean);
-  if (segments.length === 0) return { name: 'home' };
-  
-  if (segments[0] === 'catalogo') return { name: 'catalog', category: segments[1] };
-  if (segments[0] === 'produto' && segments[1]) return { name: 'product', id: segments[1] };
-  if (segments[0] === 'carrinho') return { name: 'cart' };
-  if (segments[0] === 'checkout') return { name: 'checkout' };
-  if (segments[0] === 'checkout-success') return { name: 'checkout-success' };
-  if (segments[0] === 'conta') return { name: 'account', section: segments[1] ?? 'perfil' };
-  if (segments[0] === 'admin') return { name: 'admin' };
-  
-  return { name: 'home' };
-}
-
-export type Route =
-  | { name: 'home' }
-  | { name: 'catalog'; category?: string }
-  | { name: 'product'; id: string }
-  | { name: 'cart' }
-  | { name: 'checkout' }
-  | { name: 'checkout-success' }
-  | { name: 'account'; section: string }
-  | { name: 'admin' };
+    window.location.hash = hash;
+    set({
+      currentRoute: route,
+      selectedCategory: params?.category,
+      selectedProductId: params?.productId,
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  },
+}));

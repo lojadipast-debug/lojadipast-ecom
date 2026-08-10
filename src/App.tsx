@@ -2,19 +2,10 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ShoppingBag,
   User,
-  Heart,
   Search,
-  Sparkles,
-  ShieldCheck,
-  Truck,
-  RotateCcw,
   Plus,
   Minus,
   Trash2,
-  X,
-  ArrowRight,
-  SlidersHorizontal,
-  ChevronRight,
   Menu,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -139,7 +130,7 @@ export function App() {
               <Menu size={22} />
             </button>
             <button
-              onClick={() => navigate('home')}
+              onClick={() => navigate('/')}
               className="font-display text-3xl font-bold tracking-tight text-ink-900"
             >
               dipa<span className="text-lilac-500">.</span>
@@ -149,7 +140,7 @@ export function App() {
           {/* Navegação Desktop */}
           <nav className="hidden items-center gap-6 text-sm font-semibold text-ink-600 sm:flex">
             <button
-              onClick={() => navigate('home')}
+              onClick={() => navigate('/')}
               className={`transition-colors hover:text-ink-900 ${currentRoute === 'home' ? 'text-lilac-600' : ''}`}
             >
               Início
@@ -157,7 +148,7 @@ export function App() {
             {Object.entries(CATEGORY_LABELS).map(([catKey, label]) => (
               <button
                 key={catKey}
-                onClick={() => navigate('catalog', { category: catKey })}
+                onClick={() => navigate(`/catalogo/${catKey}`)}
                 className={`transition-colors hover:text-ink-900 ${
                   currentRoute === 'catalog' && selectedCategory === catKey ? 'text-lilac-600' : ''
                 }`}
@@ -170,7 +161,7 @@ export function App() {
           {/* Ações do Utilizador */}
           <div className="flex items-center gap-3">
             <button
-              onClick={() => navigate('cart')}
+              onClick={() => navigate('/carrinho')}
               className="relative grid h-10 w-10 place-items-center rounded-xl bg-cream-100 text-ink-700 transition-colors hover:bg-lilac-100 hover:text-lilac-700"
             >
               <ShoppingBag size={20} />
@@ -181,7 +172,7 @@ export function App() {
               )}
             </button>
             <button
-              onClick={() => navigate('admin')}
+              onClick={() => navigate('/admin')}
               className="grid h-10 w-10 place-items-center rounded-xl bg-cream-100 text-ink-700 transition-colors hover:bg-lilac-100 hover:text-lilac-700"
               title="Painel de Administração"
             >
@@ -196,8 +187,8 @@ export function App() {
         {currentRoute === 'home' && (
           <HomePage
             products={products}
-            onSelectProduct={(id) => navigate('product', { productId: id })}
-            onSelectCategory={(cat) => navigate('catalog', { category: cat })}
+            onSelectProduct={(id) => navigate(`/produto/${id}`)}
+            onSelectCategory={(cat) => navigate(`/catalogo/${cat}`)}
           />
         )}
 
@@ -207,7 +198,7 @@ export function App() {
             category={selectedCategory}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
-            onSelectProduct={(id) => navigate('product', { productId: id })}
+            onSelectProduct={(id) => navigate(`/produto/${id}`)}
             favorites={favorites}
             onToggleFavorite={toggleFavorite}
           />
@@ -228,7 +219,7 @@ export function App() {
             cart={cart}
             onUpdateQuantity={updateQuantity}
             onRemove={removeFromCart}
-            onNavigateHome={() => navigate('home')}
+            onNavigateHome={() => navigate('/')}
           />
         )}
 
@@ -460,5 +451,4 @@ function CartView({
   );
 }
 
-// Exportação Padrão no final do ficheiro para resolver erros de import no main.tsx
 export default App;

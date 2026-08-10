@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from '@/store/router';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
@@ -15,6 +15,7 @@ import { AdminPage } from '@/pages/AdminPage';
 
 export function App() {
   const { path } = useRouter();
+  const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -28,7 +29,8 @@ export function App() {
       return <CatalogPage />;
     }
     if (path.startsWith('/produto/')) {
-      return <ProductPage />;
+      const productId = path.split('/produto/')[1] || '';
+      return <ProductPage id={productId} />;
     }
     if (path === '/carrinho') {
       return <CartPage />;
@@ -40,7 +42,8 @@ export function App() {
       return <CheckoutSuccessPage />;
     }
     if (path.startsWith('/conta')) {
-      return <AccountPage />;
+      const section = path.split('/conta/')[1] || 'perfil';
+      return <AccountPage section={section} />;
     }
     if (path.startsWith('/admin')) {
       return <AdminPage />;
@@ -51,11 +54,11 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-cream-50 flex flex-col font-sans text-ink-900 antialiased selection:bg-lilac-200">
-      <Header />
+      <Header onOpenSearch={() => setSearchOpen(true)} />
       <main className="flex-1">{renderRoute()}</main>
       <Footer />
       <CartDrawer />
-      <SearchOverlay />
+      <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
     </div>
   );
 }

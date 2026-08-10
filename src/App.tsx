@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useRouter } from '@/store/router';
+import { ArrowUp } from 'lucide-react';
+import { RouterProvider, useRouter, parseRoute } from '@/store/router';
 import { CartProvider } from '@/store/cart';
 import { AccountProvider } from '@/store/account';
 import { Header } from '@/components/Header';
@@ -15,57 +16,87 @@ import { CheckoutSuccessPage } from '@/pages/CheckoutSuccessPage';
 import { AccountPage } from '@/pages/AccountPage';
 import { AdminPage } from '@/pages/AdminPage';
 
-export function App() {
+function AppRoutes() {
   const { path } = useRouter();
+  const route = parseRoute(path);
   const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [path]);
-
-  const renderRoute = () => {
-    const currentPath = path || '/';
-
-    if (currentPath.startsWith('/catalogo')) {
-      return <CatalogPage />;
-    }
-    if (currentPath.startsWith('/produto/')) {
-      const productId = currentPath.split('/produto/')[1] || '';
-      return <ProductPage id={productId} />;
-    }
-    if (currentPath.startsWith('/carrinho') || currentPath.startsWith('/cart')) {
-      return <CartPage />;
-    }
-    if (currentPath.startsWith('/checkout/sucesso')) {
-      return <CheckoutSuccessPage />;
-    }
-    if (currentPath.startsWith('/checkout')) {
-      return <CheckoutPage />;
-    }
-    if (currentPath.startsWith('/conta')) {
-      const section = currentPath.split('/conta/')[1] || 'perfil';
-      return <AccountPage section={section} />;
-    }
-    if (currentPath.startsWith('/admin')) {
-      return <AdminPage />;
-    }
-
-    return <HomePage />;
-  };
+    document.title = titleFor(route);
+  }, [route]);
 
   return (
-    <AccountProvider>
-      <CartProvider>
-        <div className="min-h-screen bg-cream-50 flex flex-col font-sans text-ink-900 antialiased selection:bg-lilac-200">
-          <Header onOpenSearch={() => setSearchOpen(true)} />
-          <main className="flex-1">{renderRoute()}</main>
-          <Footer />
-          <CartDrawer />
-          <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
-        </div>
-      </CartProvider>
-    </AccountProvider>
+    <div className="flex min-h-screen flex-col">
+      <Header onOpenSearch={() => setSearchOpen(true)} />
+      <main className="flex-1">
+        {route.name === 'home' && <HomePage />}
+        {route.name === 'catalog' && (
+          <CatalogPage key={route.category ?? 'all'} category={route.category ?? 'todos'} />
+        )}
+        {route.name === 'product' && <ProductPage id={route.id ?? ''} />}
+        {route.name === 'cart' && <CartPage />}
+        {route.name === 'checkout' && <CheckoutPage />}
+        {route.name === 'checkout-success' && <CheckoutSuccessPage />}
+        {route.name === 'account' && <AccountPage section={route.section ?? 'perfil'} />}
+        {route.name === 'admin' && <AdminPage />}
+      </main>
+      <Footer />
+      <CartDrawer />
+      <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <BackToTop />
+    </div>
   );
 }
 
-export default App;
+function titleFor(route: ReturnType<typeof parseRoute>): string {
+  switch (route.name) {
+    case 'home':
+      return 'Dipa — Tudo para os mais pequenos';
+    case 'catalog':
+      return route.category ? `${route.category} · Dipa` : 'Catálogo · Dipa';
+    case 'product':
+      return 'Produto · Dipa';
+    case 'cart':
+      return 'Carrinho · Dipa';
+    case 'checkout':
+      return 'Checkout · Dipa';
+    case 'checkout-success':
+      return 'Encomenda confirmada · Dipa';
+    case 'account':
+      return 'A minha conta · Dipa';
+    case 'admin':
+      return 'Painel de administração · Dipa';
+  }
+}
+
+function BackToTop() {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setShow(window.scrollY > 600);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+  if (!show) return null;
+  return (
+    <button
+      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+      className="fixed bottom-7 right-7 z-30 grid h-13 w-13 place-items-center rounded-full bg-ink-900 text-white shadow-soft-lg ring-1 ring-ink-700 transition-all duration-300 hover:scale-110 hover:bg-lilac-700 hover:ring-lilac-500 animate-fade-in"
+      style={{ height: '52px', width: '52px' }}
+      aria-label="Voltar ao topo"
+    >
+      <ArrowUp size={20} />
+    </button>
+  );
+}
+
+export default function App() {
+  return (
+    <RouterProvider>
+      <AccountProvider>
+        <CartProvider>
+          <AppRoutes />
+        </CartProvider>
+      </AccountProvider>
+    </RouterProvider>
+  );
+}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from '@/store/router';
-import { CartProvider } from '@/store/cart'; // Importante para resolver o erro
+import { CartProvider } from '@/store/cart';
+import { AccountProvider } from '@/store/account';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { CartDrawer } from '@/components/CartDrawer';
@@ -53,15 +54,17 @@ export function App() {
   };
 
   return (
-    <CartProvider>
-      <div className="min-h-screen bg-cream-50 flex flex-col font-sans text-ink-900 antialiased selection:bg-lilac-200">
-        <Header onOpenSearch={() => setSearchOpen(true)} />
-        <main className="flex-1">{renderRoute()}</main>
-        <Footer />
-        <CartDrawer />
-        <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
-      </div>
-    </CartProvider>
+    <AccountProvider>
+      <CartProvider>
+        <div className="min-h-screen bg-cream-50 flex flex-col font-sans text-ink-900 antialiased selection:bg-lilac-200">
+          <Header onOpenSearch={() => setSearchOpen(true)} />
+          <main className="flex-1">{renderRoute()}</main>
+          <Footer />
+          <CartDrawer />
+          <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
+        </div>
+      </CartProvider>
+    </AccountProvider>
   );
 }
 

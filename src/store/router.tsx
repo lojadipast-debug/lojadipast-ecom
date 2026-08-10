@@ -9,15 +9,25 @@ interface RouterContextValue {
 const RouterContext = createContext<RouterContextValue | null>(null);
 
 export function RouterProvider({ children }: { children: ReactNode }) {
-  const [path, setPath] = useState<string>(() => window.location.hash.replace(/^#/, '') || '/');
+  const [path, setPath] = useState<string>(() => {
+    const currentHash = window.location.hash.replace(/^#/, '');
+    return currentHash || window.location.pathname || '/';
+  });
 
   useEffect(() => {
     const onHash = () => {
       setPath(window.location.hash.replace(/^#/, '') || '/');
       window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
     };
+
     window.addEventListener('hashchange', onHash);
-    if (!window.location.hash) window.location.hash = '/';
+
+    // Se não houver hash, redireciona mantendo a rota (ex: /admin vira /#/admin em vez de /)
+    if (!window.location.hash) {
+      const initialPath = window.location.pathname !== '/' ? window.location.pathname : '/';
+      window.location.hash = initialPath;
+    }
+
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
@@ -43,7 +53,7 @@ export function parseRoute(path: string): Route {
   const clean = path.split('?')[0];
   const segments = clean.split('/').filter(Boolean);
   if (segments.length === 0) return { name: 'home' };
-  
+
   if (segments[0] === 'catalogo') return { name: 'catalog', category: segments[1] };
   if (segments[0] === 'produto' && segments[1]) return { name: 'product', id: segments[1] };
   if (segments[0] === 'carrinho') return { name: 'cart' };

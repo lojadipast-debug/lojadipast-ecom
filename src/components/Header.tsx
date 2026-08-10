@@ -4,7 +4,7 @@ import { DipaLogo } from './DipaLogo';
 import { useRouter } from '@/store/router';
 import { useCart } from '@/store/cart';
 import { useAccount } from '@/store/account';
-import { CATEGORY_LABELS, PRODUCTS, formatPrice } from '@/data/catalog';
+import { CATEGORY_LABELS } from '@/data/catalog';
 import type { Category } from '@/data/catalog';
 
 const NAV: { key: Category | 'novidades' | 'promocoes'; label: string }[] = [

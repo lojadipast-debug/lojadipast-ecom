@@ -1,4 +1,4 @@
-import { Heart, ShoppingBag, ArrowRight } from 'lucide-react';
+import { Heart, ShoppingBag } from 'lucide-react';
 import { useRouter } from '@/store/router';
 import { useCart } from '@/store/cart';
 import { formatPrice } from '@/data/catalog';

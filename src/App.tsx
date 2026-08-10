@@ -25,6 +25,11 @@ function AppRoutes() {
     document.title = titleFor(route);
   }, [route]);
 
+  // Se a rota for admin, renderiza apenas o painel sem Header e Footer da loja
+  if (route.name === 'admin') {
+    return <AdminPage />;
+  }
+
   return (
     <div className="flex min-h-screen flex-col">
       <Header onOpenSearch={() => setSearchOpen(true)} />
@@ -38,7 +43,6 @@ function AppRoutes() {
         {route.name === 'checkout' && <CheckoutPage />}
         {route.name === 'checkout-success' && <CheckoutSuccessPage />}
         {route.name === 'account' && <AccountPage section={route.section ?? 'perfil'} />}
-        {route.name === 'admin' && <AdminPage />}
       </main>
       <Footer />
       <CartDrawer />

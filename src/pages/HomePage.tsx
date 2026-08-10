@@ -1,4 +1,3 @@
-import { useRouter } from '@/store/router';
 import { Hero } from '@/components/home/Hero';
 import { CategoryGrid } from '@/components/home/CategoryGrid';
 import { ProductSection } from '@/components/home/ProductSection';
@@ -9,7 +8,6 @@ import { useScrollReveal } from '@/hooks/useScrollReveal';
 
 export function HomePage() {
   useScrollReveal();
-  const { navigate } = useRouter();
 
   return (
     <>

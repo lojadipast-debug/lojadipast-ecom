@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, Lock, Truck, ChevronLeft, Loader2, AlertCircle, CreditCard } from 'lucide-react';
+import { Check, Lock, ChevronLeft, Loader2, AlertCircle, CreditCard } from 'lucide-react';
 import { useCart } from '@/store/cart';
 import { useRouter } from '@/store/router';
 import { formatPrice } from '@/data/catalog';

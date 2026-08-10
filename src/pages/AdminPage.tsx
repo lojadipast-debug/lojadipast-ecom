@@ -9,14 +9,12 @@ import {
   AlertCircle,
   Check,
   Upload,
-  ShieldAlert,
   ArrowLeft,
   Image as ImageIcon,
   Palette,
   Ruler,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { useAccount } from '@/store/account';
 import { useRouter } from '@/store/router';
 import { formatPrice, CATEGORY_LABELS } from '@/data/catalog';
 
@@ -70,7 +68,6 @@ const EMPTY_FORM = {
 };
 
 export function AdminPage() {
-  const { user, loading: authLoading } = useAccount();
   const { navigate } = useRouter();
 
   const [products, setProducts] = useState<AdminProduct[]>([]);

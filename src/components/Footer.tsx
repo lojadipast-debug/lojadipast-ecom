@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { Instagram, Facebook, Mail, Heart, ArrowRight, Check, Phone } from 'lucide-react';
 import { DipaLogo } from './DipaLogo';
 import { useRouter } from '@/store/router';
+import { useAccount } from '@/store/account';
+
+const ADMIN_EMAIL = 'blegend1080@gmail.com';
 
 const SOCIAL = [
   { Icon: Instagram, label: 'Instagram @lojas_dipa', href: 'https://www.instagram.com/lojas_dipa/' },
@@ -41,8 +44,11 @@ const LINKS = [
 
 export function Footer() {
   const { navigate } = useRouter();
+  const { user } = useAccount();
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
+
+  const isAdmin = user?.email === ADMIN_EMAIL;
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -149,14 +155,16 @@ export function Footer() {
         <p className="flex items-center gap-1.5">
           Desenhado com <Heart size={12} className="fill-rose-400 text-rose-400" /> para a infância
         </p>
-        <button
-          onClick={() => navigate('/admin')}
-          className="text-ink-300 transition-colors hover:text-ink-500"
-          aria-label="Painel de administração"
-          title="Admin"
-        >
-          Admin
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => navigate('/admin')}
+            className="text-ink-300 transition-colors hover:text-ink-500"
+            aria-label="Painel de administração"
+            title="Admin"
+          >
+            Admin
+          </button>
+        )}
       </div>
     </footer>
   );

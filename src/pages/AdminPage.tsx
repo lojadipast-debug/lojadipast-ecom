@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from '@/store/router';
+import { useScrollReveal } from '@/hooks/useScrollReveal';
 import { formatPrice, CATEGORY_LABELS } from '@/data/catalog';
 
 interface ColorOption {
@@ -69,6 +70,7 @@ const EMPTY_FORM = {
 
 export function AdminPage() {
   const { navigate } = useRouter();
+  useScrollReveal();
 
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);

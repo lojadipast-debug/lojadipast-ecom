@@ -171,7 +171,6 @@ export function AdminPage() {
 
       const { data: urlData } = supabase.storage.from('products').getPublicUrl(filePath);
 
-      // CORREÇÃO: Adiciona a nova imagem ao final da lista sem sobrescrever a principal
       setForm((prev) => ({
         ...prev,
         images: [...prev.images, urlData.publicUrl].slice(0, 5),
@@ -426,7 +425,6 @@ export function AdminPage() {
                       />
                     </label>
 
-                    {/* CORREÇÃO: Mapeamento de galeria com índices corretos */}
                     {form.images.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-2">
                         {form.images.map((img, idx) => (

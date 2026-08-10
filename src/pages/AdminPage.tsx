@@ -99,61 +99,14 @@ export function AdminPage() {
   }, []);
 
   useEffect(() => {
-    if (authLoading) return;
-    if (user?.isAdmin) {
-      fetchProducts();
-    }
-  }, [authLoading, user, fetchProducts]);
+    fetchProducts();
+  }, [fetchProducts]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
     if (!q) return products;
     return products.filter((p) => p.name.toLowerCase().includes(q));
   }, [products, search]);
-
-  // Access control
-  if (authLoading) {
-    return (
-      <div className="container-x flex items-center justify-center py-24">
-        <Loader2 size={28} className="animate-spin text-ink-300" />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="container-x py-16">
-        <div className="mx-auto max-w-md text-center">
-          <ShieldAlert size={40} className="mx-auto text-rose-400" />
-          <h1 className="mt-4 font-display text-2xl font-semibold text-ink-900">Acesso restrito</h1>
-          <p className="mt-2 text-sm text-ink-600">
-            Precisas de iniciar sessão para aceder ao painel de administração.
-          </p>
-          <button onClick={() => navigate('/conta/perfil')} className="btn-primary mt-6">
-            Ir para o login
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user.isAdmin) {
-    return (
-      <div className="container-x py-16">
-        <div className="mx-auto max-w-md text-center">
-          <ShieldAlert size={40} className="mx-auto text-rose-400" />
-          <h1 className="mt-4 font-display text-2xl font-semibold text-ink-900">Acesso negado</h1>
-          <p className="mt-2 text-sm text-ink-600">
-            A tua conta não tem permissões de administrador. Se achas que isto é um erro,
-            contacta o gestor da loja.
-          </p>
-          <button onClick={() => navigate('/')} className="btn-primary mt-6">
-            Voltar à loja
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   const openNewForm = () => {
     setForm({ ...EMPTY_FORM });
@@ -367,7 +320,7 @@ export function AdminPage() {
                     )}
                   </div>
 
-                  {/* Name (mobile + desktop) */}
+                  {/* Name */}
                   <div className="min-w-0">
                     <p className="line-clamp-1 text-sm font-semibold text-ink-900">{p.name}</p>
                     <div className="mt-0.5 flex items-center gap-2 sm:hidden">
@@ -376,17 +329,17 @@ export function AdminPage() {
                     </div>
                   </div>
 
-                  {/* Price (desktop) */}
+                  {/* Price */}
                   <span className="hidden text-sm font-semibold text-ink-900 sm:block">
                     {formatPrice(Number(p.price))}
                   </span>
 
-                  {/* Category (desktop) */}
+                  {/* Category */}
                   <span className="hidden text-sm text-ink-600 sm:block">
                     {CATEGORY_LABELS[p.category as keyof typeof CATEGORY_LABELS] ?? p.category}
                   </span>
 
-                  {/* Stock (desktop) */}
+                  {/* Stock */}
                   <span className="hidden sm:block">
                     <StockBadge status={p.stock_status} />
                   </span>
@@ -438,7 +391,6 @@ export function AdminPage() {
                   Imagem principal
                 </span>
                 <div className="mt-1.5 flex flex-col gap-3 sm:flex-row sm:items-start">
-                  {/* Preview */}
                   <div className="h-32 w-32 shrink-0 overflow-hidden rounded-2xl bg-cream-100 ring-1 ring-ink-200">
                     {form.images[0] ? (
                       <img src={form.images[0]} alt="Pré-visualização" className="h-full w-full object-cover" />
@@ -801,10 +753,10 @@ function StockBadge({ status }: { status: string }) {
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
-        inStock ? 'bg-sky-100 text-sky-700' : 'bg-rose-100 text-rose-600'
+        inStock ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
       }`}
     >
-      <span className={`h-1.5 w-1.5 rounded-full ${inStock ? 'bg-sky-500' : 'bg-rose-500'}`} />
+      <span className={`h-1.5 w-1.5 rounded-full ${inStock ? 'bg-emerald-500' : 'bg-rose-500'}`} />
       {inStock ? 'Disponível' : 'Sem stock'}
     </span>
   );

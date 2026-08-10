@@ -758,3 +758,5 @@ function StockBadge({ status }: { status: string }) {
     </span>
   );
 }
+
+export default AdminPage;

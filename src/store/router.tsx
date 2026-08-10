@@ -4,11 +4,13 @@ export type Route = string;
 
 function getPathFromHash(): string {
   const hash = window.location.hash.replace('#', '');
-  return hash || '/';
+  if (!hash || hash === '/') return '/';
+  return hash.startsWith('/') ? hash : `/${hash}`;
 }
 
 export function navigate(path: Route) {
-  window.location.hash = path.startsWith('/') ? path : `/${path}`;
+  const target = path.startsWith('/') ? path : `/${path}`;
+  window.location.hash = target;
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 

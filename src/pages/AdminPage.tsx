@@ -16,8 +16,11 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from '@/store/router';
+import { useAccount } from '@/store/account';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
 import { formatPrice, CATEGORY_LABELS } from '@/data/catalog';
+
+const ADMIN_EMAIL = 'blegend1080@gmail.com';
 
 interface ColorOption {
   name: string;
@@ -70,6 +73,7 @@ const EMPTY_FORM = {
 
 export function AdminPage() {
   const { navigate } = useRouter();
+  const { user, loading } = useAccount();
   useScrollReveal();
 
   const [products, setProducts] = useState<AdminProduct[]>([]);
@@ -247,6 +251,31 @@ export function AdminPage() {
     }
     setConfirmDelete(null);
   };
+
+  if (loading) {
+    return (
+      <div className="container-x flex min-h-screen items-center justify-center py-10">
+        <Loader2 size={28} className="animate-spin text-ink-300" />
+      </div>
+    );
+  }
+
+  if (user?.email !== ADMIN_EMAIL) {
+    return (
+      <div className="container-x flex min-h-screen flex-col items-center justify-center gap-4 py-20 text-center">
+        <div className="grid h-16 w-16 place-items-center rounded-full bg-rose-100">
+          <AlertCircle size={28} className="text-rose-600" />
+        </div>
+        <h1 className="font-display text-3xl font-semibold text-ink-900">Acesso negado</h1>
+        <p className="max-w-sm text-sm text-ink-500">
+          Não tens permissão para aceder ao painel de administração. Inicia sessão com uma conta autorizada.
+        </p>
+        <button onClick={() => navigate('/')} className="btn-primary mt-2">
+          <ArrowLeft size={18} /> Voltar à loja
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="container-x py-10">

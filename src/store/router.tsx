@@ -1,64 +1,66 @@
-import { useState, useEffect } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 
-export type Route = string;
-
-interface NavigateParams {
-  category?: string;
-  productId?: string;
+interface RouterContextValue {
+  path: string;
+  navigate: (to: string) => void;
 }
 
-function getPathFromHash(): string {
-  const hash = window.location.hash.replace('#', '');
-  if (!hash || hash === '/') return '/';
-  return hash.startsWith('/') ? hash : `/${hash}`;
-}
+const RouterContext = createContext<RouterContextValue | null>(null);
 
-export function navigate(path: Route, params?: NavigateParams) {
-  let target = path;
-
-  if (params?.category) {
-    target = `/catalogo/${params.category}`;
-  } else if (params?.productId) {
-    target = `/produto/${params.productId}`;
-  }
-
-  if (!target.startsWith('/')) {
-    target = `/${target}`;
-  }
-
-  window.location.hash = target;
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-export function useRouter() {
-  const [path, setPath] = useState<string>(getPathFromHash());
+export function RouterProvider({ children }: { children: ReactNode }) {
+  const [path, setPath] = useState<string>(() => window.location.hash.replace(/^#/, '') || '/');
 
   useEffect(() => {
-    const handleHashChange = () => {
-      setPath(getPathFromHash());
+    const onHash = () => {
+      setPath(window.location.hash.replace(/^#/, '') || '/');
+      window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
     };
-
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    window.addEventListener('hashchange', onHash);
+    if (!window.location.hash) window.location.hash = '/';
+    return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
-  const parts = path.split('/').filter(Boolean);
-
-  // Extrai subcategoria e ID do produto do caminho
-  let selectedCategory: string | undefined = undefined;
-  let selectedProductId: string | undefined = undefined;
-
-  if (path.startsWith('/catalogo/')) {
-    selectedCategory = parts[1];
-  } else if (path.startsWith('/produto/')) {
-    selectedProductId = parts[1];
-  }
-
-  return {
-    path,
-    currentRoute: path,
-    selectedCategory,
-    selectedProductId,
-    navigate: (route: Route, params?: NavigateParams) => navigate(route, params),
+  const navigate = (to: string) => {
+    const target = to.startsWith('#') ? to.slice(1) : to;
+    if (target === path) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    window.location.hash = target;
   };
+
+  return <RouterContext.Provider value={{ path, navigate }}>{children}</RouterContext.Provider>;
 }
+
+export function useRouter(): RouterContextValue {
+  const ctx = useContext(RouterContext);
+  if (!ctx) throw new Error('useRouter must be used within RouterProvider');
+  return ctx;
+}
+
+export function parseRoute(path: string): Route {
+  const clean = path.split('?')[0];
+  const segments = clean.split('/').filter(Boolean);
+  if (segments.length === 0) return { name: 'home' };
+  
+  // Aceita /catalogo e /catalogo/qualquer-categoria
+  if (segments[0] === 'catalogo') return { name: 'catalog', category: segments[1] };
+  if (segments[0] === 'produto' && segments[1]) return { name: 'product', id: segments[1] };
+  if (segments[0] === 'carrinho') return { name: 'cart' };
+  if (segments[0] === 'checkout') return { name: 'checkout' };
+  if (segments[0] === 'checkout-success') return { name: 'checkout-success' };
+  if (segments[0] === 'conta') return { name: 'account', section: segments[1] ?? 'perfil' };
+  if (segments[0] === 'admin') return { name: 'admin' };
+  return { name: 'home' };
+}
+
+export type Route =
+  | { name: 'home' }
+  | { name: 'catalog'; category?: string }
+  | { name: 'product'; id: string }
+  | { name: 'cart' }
+  | { name: 'checkout' }
+  | { name: 'checkout-success' }
+  | { name: 'account'; section: string }
+  | { name: 'admin' };

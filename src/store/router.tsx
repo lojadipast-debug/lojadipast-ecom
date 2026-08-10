@@ -26,9 +26,15 @@ export function useRouter() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
+  const parts = path.split('/').filter(Boolean);
+  const selectedCategory = path.startsWith('/catalogo/') ? parts[1] : undefined;
+  const selectedProductId = path.startsWith('/produto/') ? parts[1] : undefined;
+
   return {
     path,
     currentRoute: path,
+    selectedCategory,
+    selectedProductId,
     navigate: (route: Route) => navigate(route),
   };
 }

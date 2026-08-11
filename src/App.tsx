@@ -3,6 +3,7 @@ import { ArrowUp } from 'lucide-react';
 import { RouterProvider, useRouter, parseRoute } from '@/store/router';
 import { CartProvider } from '@/store/cart';
 import { AccountProvider } from '@/store/account';
+import { ProductsProvider } from '@/store/products';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { CartDrawer } from '@/components/CartDrawer';
@@ -96,11 +97,13 @@ function BackToTop() {
 export default function App() {
   return (
     <RouterProvider>
-      <AccountProvider>
-        <CartProvider>
-          <AppRoutes />
-        </CartProvider>
-      </AccountProvider>
+      <ProductsProvider>
+        <AccountProvider>
+          <CartProvider>
+            <AppRoutes />
+          </CartProvider>
+        </AccountProvider>
+      </ProductsProvider>
     </RouterProvider>
   );
 }

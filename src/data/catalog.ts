@@ -34,6 +34,36 @@ export interface Product {
   isNew?: boolean;
   isPromo?: boolean;
   bestSeller?: boolean;
+  stockQuantity?: number;
+  subcategory?: string;
+  promoActive?: boolean;
+  promoOriginalPrice?: number;
+  promoPrice?: number;
+  promoStartDate?: string | null;
+  promoEndDate?: string | null;
+}
+
+export function isPromoActiveNow(product: Product): boolean {
+  if (!product.promoActive || !product.promoPrice) return false;
+  const now = new Date();
+  if (product.promoStartDate && new Date(product.promoStartDate) > now) return false;
+  if (product.promoEndDate && new Date(product.promoEndDate) < now) return false;
+  return true;
+}
+
+export function effectivePrice(product: Product): number {
+  return isPromoActiveNow(product) ? product.promoPrice! : product.price;
+}
+
+export function effectiveOldPrice(product: Product): number | undefined {
+  if (isPromoActiveNow(product)) {
+    return product.promoOriginalPrice ?? product.price;
+  }
+  return product.oldPrice;
+}
+
+export function isOutOfStock(product: Product): boolean {
+  return (product.stockQuantity ?? 0) <= 0;
 }
 
 export const CATEGORY_LABELS: Record<Category, string> = {

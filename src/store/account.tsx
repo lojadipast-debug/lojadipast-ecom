@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
-import { getProductById } from '@/data/catalog';
+import { useProducts } from '@/store/products';
 
 export interface AccountUser {
   name: string;
@@ -59,6 +59,7 @@ function nameFromEmail(email: string): string {
 }
 
 export function AccountProvider({ children }: { children: ReactNode }) {
+  const { getProductById } = useProducts();
   const [user, setUser] = useState<AccountUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [addresses] = useState<AccountAddress[]>(DEMO_ADDRESSES);

@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { getProductById, type Product } from '@/data/catalog';
+import { effectivePrice } from '@/data/catalog';
+import type { Product } from '@/data/catalog';
+import { useProducts } from '@/store/products';
 
 export interface CartItem {
   productId: string;
@@ -51,6 +53,7 @@ function readStored<T>(key: string, fallback: T): T {
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
+  const { getProductById } = useProducts();
   const [rawItems, setRawItems] = useState<CartItem[]>(() => readStored<CartItem[]>(CART_KEY, []));
   const [favorites, setFavorites] = useState<string[]>(() => readStored<string[]>(FAV_KEY, []));
   const [isOpen, setIsOpen] = useState(false);
@@ -68,16 +71,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const key = cartItemKey(item);
     setRawItems((prev) => {
       const existing = prev.find((p) => cartItemKey(p) === key);
+      const product = getProductById(item.productId);
+      const stock = product?.stockQuantity ?? 0;
+      if (stock <= 0) return prev;
       if (existing) {
         return prev.map((p) =>
-          cartItemKey(p) === key ? { ...p, quantity: p.quantity + item.quantity } : p
+          cartItemKey(p) === key ? { ...p, quantity: Math.min(stock, p.quantity + item.quantity) } : p
         );
       }
       return [...prev, item];
     });
     setLastAddedKey(key);
     setIsOpen(true);
-  }, []);
+  }, [getProductById]);
 
   const removeFromCart = useCallback((key: string) => {
     setRawItems((prev) => prev.filter((p) => cartItemKey(p) !== key));
@@ -115,12 +121,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
           return { ...item, product, key: cartItemKey(item) };
         })
         .filter((x): x is StoredCartItem => x !== null),
-    [rawItems]
+    [rawItems, getProductById]
   );
 
   const cartCount = useMemo(() => items.reduce((s, i) => s + i.quantity, 0), [items]);
   const subtotal = useMemo(
-    () => items.reduce((s, i) => s + i.product.price * i.quantity, 0),
+    () => items.reduce((s, i) => s + effectivePrice(i.product) * i.quantity, 0),
     [items]
   );
 

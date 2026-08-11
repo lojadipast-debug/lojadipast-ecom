@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ArrowRight, Flame, Tag } from 'lucide-react';
 import { ProductCard } from '@/components/ProductCard';
 import { useRouter } from '@/store/router';
-import { PRODUCTS } from '@/data/catalog';
+import { useProducts } from '@/store/products';
 
 interface Props {
   title: string;
@@ -14,7 +14,8 @@ interface Props {
 
 export function ProductSection({ title, eyebrow, filter, cta, ctaTo }: Props) {
   const { navigate } = useRouter();
-  const products = PRODUCTS.filter((p) => p[filter]).slice(0, 8);
+  const { products: allProducts } = useProducts();
+  const products = allProducts.filter((p) => p[filter]).slice(0, 8);
   const [tab, setTab] = useState(0);
   const isPromo = filter === 'isPromo';
 

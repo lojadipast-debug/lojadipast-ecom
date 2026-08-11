@@ -10,7 +10,8 @@ import {
 } from 'lucide-react';
 import { useRouter } from '@/store/router';
 import { useCart } from '@/store/cart';
-import { getProductById, getRelatedProducts, formatPrice, CATEGORY_LABELS } from '@/data/catalog';
+import { formatPrice, CATEGORY_LABELS, effectivePrice, effectiveOldPrice, isOutOfStock, isPromoActiveNow } from '@/data/catalog';
+import { useProducts } from '@/store/products';
 import { ProductCard } from '@/components/ProductCard';
 import { StarRating } from '@/components/StarRating';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
@@ -19,6 +20,7 @@ export function ProductPage({ id }: { id: string }) {
   useScrollReveal();
   const { navigate } = useRouter();
   const { addToCart, toggleFavorite, isFavorite } = useCart();
+  const { getProductById, getRelatedProducts, loading } = useProducts();
 
   const product = getProductById(id);
   const [activeImg, setActiveImg] = useState(0);
@@ -31,6 +33,10 @@ export function ProductPage({ id }: { id: string }) {
 
   const hasSizes = product?.sizes && product.sizes.length > 0;
   const hasColors = product?.colors && product.colors.length > 0;
+
+  if (loading) {
+    return <div className="container-x py-32 text-center text-sm text-ink-500">A carregar produto…</div>;
+  }
 
   if (!product) {
     return (
@@ -45,8 +51,12 @@ export function ProductPage({ id }: { id: string }) {
 
   const related = getRelatedProducts(product);
   const fav = isFavorite(product.id);
-  const discount = product.oldPrice
-    ? Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100)
+  const outOfStock = isOutOfStock(product);
+  const promoNow = isPromoActiveNow(product);
+  const currentPrice = effectivePrice(product);
+  const oldPrice = effectiveOldPrice(product);
+  const discount = oldPrice
+    ? Math.round(((oldPrice - currentPrice) / oldPrice) * 100)
     : 0;
 
   const onZoomMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -57,6 +67,7 @@ export function ProductPage({ id }: { id: string }) {
   };
 
   const handleAdd = () => {
+    if (outOfStock) return;
     if (hasSizes && !size) setSize(product.sizes[0]);
     if (hasColors && !color) setColor(product.colors[0].name);
     addToCart({
@@ -104,9 +115,14 @@ export function ProductPage({ id }: { id: string }) {
             <span className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-white/80 px-2.5 py-1 text-[10px] font-semibold text-ink-600 backdrop-blur-sm">
               <ZoomIn size={12} /> Passa o rato para ampliar
             </span>
-            {product.isPromo && discount > 0 && (
+            {(product.isPromo || promoNow) && discount > 0 && (
               <span className="absolute left-3 top-3 rounded-full bg-rose-400 px-3 py-1 text-xs font-bold text-white shadow-soft">
                 -{discount}%
+              </span>
+            )}
+            {outOfStock && (
+              <span className="absolute left-3 top-3 rounded-full bg-ink-900/90 px-3 py-1 text-xs font-bold text-white shadow-soft">
+                Esgotado
               </span>
             )}
           </div>
@@ -151,11 +167,28 @@ export function ProductPage({ id }: { id: string }) {
 
           <div className="mt-5 flex items-end gap-3">
             <span className="font-display text-3xl font-semibold text-ink-900">
-              {formatPrice(product.price)}
+              {formatPrice(currentPrice)}
             </span>
-            {product.oldPrice && (
+            {oldPrice && oldPrice > currentPrice && (
               <span className="text-lg text-ink-400 line-through">
-                {formatPrice(product.oldPrice)}
+                {formatPrice(oldPrice)}
+              </span>
+            )}
+          </div>
+
+          {/* stock indicator */}
+          <div className="mt-3">
+            {outOfStock ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-700">
+                Esgotado — avisa-nos quando disponível
+              </span>
+            ) : (product.stockQuantity ?? 0) <= 5 ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+                Apenas {product.stockQuantity} em stock
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-700">
+                Em stock
               </span>
             )}
           </div>
@@ -232,7 +265,7 @@ export function ProductPage({ id }: { id: string }) {
               </button>
               <span className="w-8 text-center font-semibold text-ink-900">{qty}</span>
               <button
-                onClick={() => setQty((q) => q + 1)}
+                onClick={() => setQty((q) => Math.min(product.stockQuantity ?? 0, q + 1))}
                 className="grid h-11 w-11 place-items-center rounded-full text-ink-600 hover:bg-cream-100"
                 aria-label="Aumentar quantidade"
               >
@@ -240,14 +273,16 @@ export function ProductPage({ id }: { id: string }) {
               </button>
             </div>
 
-            <button onClick={handleAdd} className="btn-primary flex-1 py-3.5">
+            <button onClick={handleAdd} disabled={outOfStock} className="btn-primary flex-1 py-3.5 disabled:cursor-not-allowed disabled:opacity-50">
               {added ? (
                 <>
                   <Check size={18} /> Adicionado!
                 </>
+              ) : outOfStock ? (
+                <>Esgotado</>
               ) : (
                 <>
-                  <ShoppingBag size={18} /> Comprar — {formatPrice(product.price * qty)}
+                  <ShoppingBag size={18} /> Comprar — {formatPrice(currentPrice * qty)}
                 </>
               )}
             </button>

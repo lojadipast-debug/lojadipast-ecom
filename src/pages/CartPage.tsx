@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Minus, Plus, Trash2, Tag, ArrowRight, ShoppingBag, Truck, Check } from 'lucide-react';
 import { useCart } from '@/store/cart';
 import { useRouter } from '@/store/router';
-import { formatPrice } from '@/data/catalog';
+import { formatPrice, effectivePrice } from '@/data/catalog';
 
 export function CartPage() {
   const { items, updateQuantity, removeFromCart, subtotal, clearCart } = useCart();
@@ -112,7 +112,7 @@ export function CartPage() {
                     </button>
                   </div>
                   <span className="font-display text-lg font-semibold text-ink-900">
-                    {formatPrice(item.product.price * item.quantity)}
+                    {formatPrice(effectivePrice(item.product) * item.quantity)}
                   </span>
                 </div>
               </div>

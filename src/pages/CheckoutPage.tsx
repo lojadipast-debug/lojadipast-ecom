@@ -1,10 +1,22 @@
 import { useState } from 'react';
-import { Check, Lock, ChevronLeft, Loader2, AlertCircle, CreditCard } from 'lucide-react';
+import {
+  Check,
+  Lock,
+  ChevronLeft,
+  ChevronDown,
+  Loader2,
+  AlertCircle,
+  CreditCard,
+  Smartphone,
+  Wallet,
+  Shield,
+} from 'lucide-react';
 import { useCart } from '@/store/cart';
 import { useRouter } from '@/store/router';
-import { formatPrice } from '@/data/catalog';
+import { formatPrice, effectivePrice } from '@/data/catalog';
 
 type Step = 'info' | 'pago';
+type PaymentMethod = 'card' | 'mbway' | 'paypal';
 
 interface ShippingInfo {
   name: string;
@@ -13,6 +25,7 @@ interface ShippingInfo {
   address: string;
   city: string;
   postal: string;
+  nif: string;
 }
 
 const EMPTY_INFO: ShippingInfo = {
@@ -22,6 +35,7 @@ const EMPTY_INFO: ShippingInfo = {
   address: '',
   city: '',
   postal: '',
+  nif: '',
 };
 
 export function CheckoutPage() {
@@ -32,6 +46,14 @@ export function CheckoutPage() {
   const [shippingMethod, setShippingMethod] = useState<'standard' | 'express'>('standard');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvc, setCardCvc] = useState('');
+  const [cardName, setCardName] = useState('');
+  const [billingSame, setBillingSame] = useState(true);
+  const [mbwayPhone, setMbwayPhone] = useState('');
 
   const standardShipping = subtotal >= 50 ? 0 : 4.9;
   const shipping = shippingMethod === 'express' ? 9.9 : standardShipping;
@@ -65,9 +87,43 @@ export function CheckoutPage() {
     setStep('pago');
   };
 
-  const redirectToStripe = async (e: React.FormEvent) => {
+  const formatCardNumber = (val: string) => {
+    const digits = val.replace(/\D/g, '').slice(0, 16);
+    return digits.replace(/(.{4})/g, '$1 ').trim();
+  };
+
+  const formatExpiry = (val: string) => {
+    const digits = val.replace(/\D/g, '').slice(0, 4);
+    if (digits.length >= 3) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    return digits;
+  };
+
+  const validateCard = (): string | null => {
+    if (cardNumber.replace(/\s/g, '').length < 13) return 'Introduz um número de cartão válido.';
+    if (cardExpiry.length < 5) return 'Introduz a data de expiração (MM/AA).';
+    if (cardCvc.length < 3) return 'Introduz o código CVC/CVV.';
+    if (!cardName.trim()) return 'Introduz o nome no cartão.';
+    return null;
+  };
+
+  const validateMbway = (): string | null => {
+    const digits = mbwayPhone.replace(/\D/g, '');
+    if (digits.length < 9) return 'Introduz um número de telemóvel válido (9 dígitos).';
+    return null;
+  };
+
+  const redirectToCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (paymentMethod === 'card') {
+      const cardErr = validateCard();
+      if (cardErr) { setError(cardErr); return; }
+    } else if (paymentMethod === 'mbway') {
+      const mbErr = validateMbway();
+      if (mbErr) { setError(mbErr); return; }
+    }
+
     setSubmitting(true);
 
     try {
@@ -82,7 +138,7 @@ export function CheckoutPage() {
           items: items.map((item) => ({
             productId: item.productId,
             name: item.product.name,
-            price: item.product.price,
+            price: effectivePrice(item.product),
             quantity: item.quantity,
             size: item.size,
             color: item.color,
@@ -91,6 +147,9 @@ export function CheckoutPage() {
           shippingMethod,
           shippingCost: shipping,
           subtotal,
+          paymentMethod,
+          mbwayPhone: paymentMethod === 'mbway' ? mbwayPhone : undefined,
+          nif: info.nif.trim() || undefined,
           customer: {
             name: info.name.trim(),
             email: info.email.trim(),
@@ -143,7 +202,7 @@ export function CheckoutPage() {
         })}
       </div>
 
-      <form onSubmit={redirectToStripe} className="mt-10 grid gap-8 lg:grid-cols-[1fr_380px]">
+      <form onSubmit={redirectToCheckout} className="mt-10 grid gap-8 lg:grid-cols-[1fr_380px]">
         {/* form */}
         <div className="flex flex-col gap-6">
           {step === 'info' && (
@@ -156,6 +215,7 @@ export function CheckoutPage() {
                 <Field label="Morada" placeholder="Rua das Flores, 12" required value={info.address} onChange={setField('address')} className="sm:col-span-2" />
                 <Field label="Cidade" placeholder="Lisboa" required value={info.city} onChange={setField('city')} />
                 <Field label="Código postal" placeholder="1200-190" required value={info.postal} onChange={setField('postal')} />
+                <Field label="NIF (opcional)" placeholder="123456789" value={info.nif} onChange={setField('nif')} />
               </div>
               <div className="mt-5">
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-500">
@@ -204,23 +264,137 @@ export function CheckoutPage() {
             <section className="rounded-3xl bg-white p-6 ring-1 ring-ink-100">
               <h2 className="font-display text-lg font-semibold text-ink-900">Pagamento</h2>
               <p className="mt-1 flex items-center gap-1.5 text-xs text-ink-500">
-                <Lock size={13} /> Pagamento processado de forma segura pela Stripe
+                <Lock size={13} /> Pagamento processado de forma segura
               </p>
 
-              <div className="mt-5 rounded-2xl bg-cream-50 p-5 text-sm text-ink-600 ring-1 ring-ink-100">
-                <div className="flex items-center gap-3">
-                  <span className="grid h-10 w-10 place-items-center rounded-full bg-lilac-100 text-lilac-700">
-                    <CreditCard size={20} />
-                  </span>
-                  <div>
-                    <p className="font-semibold text-ink-900">Pagamento com cartão via Stripe</p>
-                    <p className="text-xs text-ink-500">Visa, Mastercard, Amex e mais</p>
+              {/* Payment method accordion */}
+              <div className="mt-5 flex flex-col gap-3">
+                {/* Cartão de Crédito */}
+                <PaymentOption
+                  active={paymentMethod === 'card'}
+                  onClick={() => setPaymentMethod('card')}
+                  icon={<CreditCard size={20} />}
+                  title="Cartão de Crédito / Débito"
+                  badges={
+                    <div className="flex items-center gap-1.5">
+                      <CardBadge label="VISA" bg="bg-[#1a1f71]" />
+                      <CardBadge label="MC" bg="bg-[#eb001b]" />
+                      <CardBadge label="AMEX" bg="bg-[#006fcf]" />
+                    </div>
+                  }
+                >
+                  <div className="grid gap-4">
+                    <label className="block">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-ink-500">Número do cartão</span>
+                      <input
+                        className="input-field mt-1.5"
+                        value={cardNumber}
+                        onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
+                        placeholder="1234 5678 9012 3456"
+                        inputMode="numeric"
+                        autoComplete="cc-number"
+                      />
+                    </label>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <label className="block">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-ink-500">Data de expiração (MM/AA)</span>
+                        <input
+                          className="input-field mt-1.5"
+                          value={cardExpiry}
+                          onChange={(e) => setCardExpiry(formatExpiry(e.target.value))}
+                          placeholder="MM/AA"
+                          inputMode="numeric"
+                          autoComplete="cc-exp"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-ink-500">CVC / CVV</span>
+                        <input
+                          className="input-field mt-1.5"
+                          value={cardCvc}
+                          onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                          placeholder="123"
+                          inputMode="numeric"
+                          autoComplete="cc-csc"
+                        />
+                      </label>
+                    </div>
+                    <label className="block">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-ink-500">Nome no cartão</span>
+                      <input
+                        className="input-field mt-1.5"
+                        value={cardName}
+                        onChange={(e) => setCardName(e.target.value)}
+                        placeholder="MARIA SILVA"
+                        autoComplete="cc-name"
+                      />
+                    </label>
+                    <label className="flex cursor-pointer items-center gap-3 rounded-2xl bg-cream-50 p-3.5 ring-1 ring-ink-100">
+                      <input
+                        type="checkbox"
+                        checked={billingSame}
+                        onChange={(e) => setBillingSame(e.target.checked)}
+                        className="h-5 w-5 rounded accent-lilac-500"
+                      />
+                      <span className="text-sm text-ink-700">Utilizar endereço de envio como endereço de faturação</span>
+                    </label>
                   </div>
-                </div>
-                <p className="mt-3 text-xs leading-relaxed">
-                  Vais ser redirecionada para uma página de pagamento segura da Stripe para
-                  concluir a tua compra. Os teus dados de cartão nunca passam pelo nosso servidor.
-                </p>
+                </PaymentOption>
+
+                {/* MB WAY / Multibanco */}
+                <PaymentOption
+                  active={paymentMethod === 'mbway'}
+                  onClick={() => setPaymentMethod('mbway')}
+                  icon={<Smartphone size={20} />}
+                  title="MB WAY / Multibanco"
+                  badges={
+                    <div className="flex items-center gap-1.5">
+                      <span className="rounded-md bg-[#e20074] px-2 py-0.5 text-[10px] font-bold text-white">MB WAY</span>
+                      <span className="rounded-md bg-[#0066b1] px-2 py-0.5 text-[10px] font-bold text-white">Multibanco</span>
+                    </div>
+                  }
+                >
+                  <div className="flex flex-col gap-4">
+                    <label className="block">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-ink-500">Número de telemóvel MB WAY</span>
+                      <input
+                        className="input-field mt-1.5"
+                        value={mbwayPhone}
+                        onChange={(e) => setMbwayPhone(e.target.value)}
+                        placeholder="912 345 678"
+                        inputMode="tel"
+                      />
+                    </label>
+                    <div className="flex items-start gap-2.5 rounded-2xl bg-cream-50 p-4 text-xs leading-relaxed text-ink-600 ring-1 ring-ink-100">
+                      <Smartphone size={16} className="mt-0.5 shrink-0 text-[#e20074]" />
+                      <p>
+                        Receberás uma notificação na app MB WAY para autorizares o pagamento.
+                        Para Multibanco, geramos uma referência de pagamento que será enviada
+                        por email após confirmares.
+                      </p>
+                    </div>
+                  </div>
+                </PaymentOption>
+
+                {/* PayPal */}
+                <PaymentOption
+                  active={paymentMethod === 'paypal'}
+                  onClick={() => setPaymentMethod('paypal')}
+                  icon={<Wallet size={20} />}
+                  title="PayPal"
+                  badges={
+                    <span className="rounded-md bg-[#003087] px-2 py-0.5 text-[10px] font-bold text-white">Pay<span className="text-[#009cde]">Pal</span></span>
+                  }
+                >
+                  <div className="flex items-start gap-2.5 rounded-2xl bg-cream-50 p-4 text-sm leading-relaxed text-ink-600 ring-1 ring-ink-100">
+                    <Shield size={16} className="mt-0.5 shrink-0 text-[#003087]" />
+                    <p>
+                      Serás redirecionada em segurança para o site do PayPal para concluíres
+                      o pagamento com a tua conta PayPal. Após a autorização, voltarás
+                      automaticamente para a loja.
+                    </p>
+                  </div>
+                </PaymentOption>
               </div>
 
               {error && (
@@ -269,7 +443,7 @@ export function CheckoutPage() {
                     <p className="text-xs text-ink-500">{item.color} · {item.size}</p>
                   </div>
                   <span className="text-sm font-semibold text-ink-900">
-                    {formatPrice(item.product.price * item.quantity)}
+                    {formatPrice(effectivePrice(item.product) * item.quantity)}
                   </span>
                 </li>
               ))}
@@ -344,5 +518,75 @@ function ShipCard({
       </div>
       <span className="text-sm font-semibold text-ink-700">{price}</span>
     </button>
+  );
+}
+
+function PaymentOption({
+  active,
+  onClick,
+  icon,
+  title,
+  badges,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  title: string;
+  badges?: React.ReactNode;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div
+      className={`overflow-hidden rounded-2xl ring-1 transition-all ${
+        active ? 'bg-lilac-50/50 ring-lilac-500' : 'bg-white ring-ink-200 hover:ring-lilac-300'
+      }`}
+    >
+      <button
+        type="button"
+        onClick={onClick}
+        className="flex w-full cursor-pointer items-center gap-3 p-4 text-left"
+      >
+        <span
+          className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 transition-all ${
+            active ? 'border-lilac-500 bg-lilac-500' : 'border-ink-300'
+          }`}
+        >
+          {active && <span className="h-2 w-2 rounded-full bg-white" />}
+        </span>
+        <span
+          className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl transition-colors ${
+            active ? 'bg-lilac-200 text-lilac-700' : 'bg-ink-100 text-ink-500'
+          }`}
+        >
+          {icon}
+        </span>
+        <div className="flex flex-1 items-center justify-between gap-3">
+          <span className="text-sm font-semibold text-ink-900">{title}</span>
+          {badges}
+        </div>
+        <ChevronDown
+          size={18}
+          className={`shrink-0 text-ink-400 transition-transform duration-300 ${active ? 'rotate-180' : ''}`}
+        />
+      </button>
+      <div
+        className={`grid transition-all duration-300 ${
+          active ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div className="border-t border-ink-100 p-4">{children}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CardBadge({ label, bg }: { label: string; bg: string }) {
+  return (
+    <span className={`rounded-md ${bg} px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white`}>
+      {label}
+    </span>
   );
 }

@@ -13,12 +13,16 @@ import {
   Image as ImageIcon,
   Palette,
   Ruler,
+  Package,
+  ChevronDown,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from '@/store/router';
 import { useAccount } from '@/store/account';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
 import { formatPrice, CATEGORY_LABELS } from '@/data/catalog';
+
+type AdminTab = 'products' | 'orders';
 
 const ADMIN_EMAIL = 'blegend1080@gmail.com';
 
@@ -32,6 +36,7 @@ interface AdminProduct {
   name: string;
   price: number;
   category: string;
+  subcategory: string | null;
   description: string;
   stock_status: string;
   images: string[];
@@ -39,6 +44,30 @@ interface AdminProduct {
   has_colors: boolean;
   sizes: string[];
   colors: ColorOption[];
+}
+
+interface AdminOrder {
+  id: string;
+  order_number: string | null;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string | null;
+  customer_address: string | null;
+  customer_city: string | null;
+  customer_postal_code: string | null;
+  nif: string | null;
+  total: number;
+  status: string;
+  shipping_method: string;
+  payment_method: string | null;
+  created_at: string;
+  order_items?: {
+    product_name: string;
+    quantity: number;
+    unit_price: number;
+    size: string;
+    color: string;
+  }[];
 }
 
 type SaveState = 'idle' | 'loading' | 'success' | 'error';
@@ -52,6 +81,24 @@ const CATEGORIES = [
   { value: 'acessorios', label: 'Acessórios' },
 ];
 
+const SUBCATEGORIES: Record<string, string[]> = {
+  bebe: ['Corpo', 'Conjuntos', 'Camisolas', 'Pijamas', 'Acessórios bebé'],
+  menina: ['Vestidos', 'T-shirts', 'Calças', 'Camisolas', 'Saias', 'Conjuntos', 'Acessórios'],
+  menino: ['Camisolas', 'T-shirts', 'Calças', 'Conjuntos', 'Pijamas', 'Chapéus', 'Acessórios'],
+  mochilas: ['Escola', 'Passeio', 'Saco de desporto', 'Acessórios'],
+  brinquedos: ['Pelúcias', 'Educativos', 'Madeira', 'Ao ar livre', 'Livros'],
+  acessorios: ['Sapatilhas', 'Chapéus', 'Lenços', 'Malas', 'Outros'],
+};
+
+const ORDER_STATUSES = [
+  { value: 'pending', label: 'Pendente' },
+  { value: 'paid', label: 'Pago' },
+  { value: 'preparing', label: 'Em preparação' },
+  { value: 'shipped', label: 'Enviado' },
+  { value: 'delivered', label: 'Entregue' },
+  { value: 'cancelled', label: 'Cancelada' },
+];
+
 const STOCK_OPTIONS = ['Disponivel', 'Sem stock'];
 
 const EMPTY_FORM = {
@@ -59,6 +106,7 @@ const EMPTY_FORM = {
   name: '',
   price: '',
   category: 'bebe',
+  subcategory: '',
   description: '',
   stock_status: 'Disponivel',
   images: [] as string[],
@@ -76,6 +124,7 @@ export function AdminPage() {
   const { user, loading } = useAccount();
   useScrollReveal();
 
+  const [activeTab, setActiveTab] = useState<AdminTab>('products');
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [search, setSearch] = useState('');
@@ -88,11 +137,18 @@ export function AdminPage() {
   const [imageUploading, setImageUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Orders state
+  const [orders, setOrders] = useState<AdminOrder[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(true);
+  const [orderSearch, setOrderSearch] = useState('');
+  const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+  const [orderUpdating, setOrderUpdating] = useState<string | null>(null);
+
   const fetchProducts = useCallback(async () => {
     setLoadingProducts(true);
     const { data, error } = await supabase
       .from('products')
-      .select('id, name, price, category, description, stock_status, images, has_sizes, has_colors, sizes, colors')
+      .select('id, name, price, category, subcategory, description, stock_status, images, has_sizes, has_colors, sizes, colors')
       .order('created_at', { ascending: false });
 
     if (!error && data) {
@@ -104,6 +160,42 @@ export function AdminPage() {
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
+
+  const fetchOrders = useCallback(async () => {
+    setLoadingOrders(true);
+    const { data, error } = await supabase
+      .from('orders')
+      .select('id, order_number, customer_name, customer_email, customer_phone, customer_address, customer_city, customer_postal_code, nif, total, status, shipping_method, payment_method, created_at')
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      setOrders(data as AdminOrder[]);
+    }
+    setLoadingOrders(false);
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'orders') fetchOrders();
+  }, [activeTab, fetchOrders]);
+
+  const updateOrderStatus = async (orderId: string, newStatus: string) => {
+    setOrderUpdating(orderId);
+    const { error } = await supabase.from('orders').update({ status: newStatus }).eq('id', orderId);
+    if (!error) {
+      setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status: newStatus } : o));
+    }
+    setOrderUpdating(null);
+  };
+
+  const filteredOrders = useMemo(() => {
+    const q = orderSearch.toLowerCase().trim();
+    if (!q) return orders;
+    return orders.filter((o) =>
+      (o.order_number ?? '').toLowerCase().includes(q) ||
+      (o.customer_name ?? '').toLowerCase().includes(q) ||
+      (o.customer_email ?? '').toLowerCase().includes(q)
+    );
+  }, [orders, orderSearch]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -125,6 +217,7 @@ export function AdminPage() {
       name: p.name,
       price: String(p.price),
       category: p.category,
+      subcategory: p.subcategory ?? '',
       description: p.description ?? '',
       stock_status: p.stock_status ?? 'Disponivel',
       images: p.images ?? [],
@@ -212,6 +305,7 @@ export function AdminPage() {
       name: form.name.trim(),
       price: priceNum,
       category: form.category,
+      subcategory: form.subcategory || null,
       description: form.description.trim(),
       stock_status: form.stock_status,
       images: form.images,

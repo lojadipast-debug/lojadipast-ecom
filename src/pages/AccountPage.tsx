@@ -13,7 +13,8 @@ import {
 import { useAccount } from '@/store/account';
 import { useRouter } from '@/store/router';
 import { useCart } from '@/store/cart';
-import { formatPrice, getProductById } from '@/data/catalog';
+import { useProducts } from '@/store/products';
+import { formatPrice } from '@/data/catalog';
 import { ProductCard } from '@/components/ProductCard';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
 
@@ -199,6 +200,7 @@ export function AccountPage({ section }: { section: string }) {
 
 function FavoritesSection() {
   const { favorites } = useCart();
+  const { getProductById } = useProducts();
   const products = favorites.map(getProductById).filter((p): p is NonNullable<typeof p> => Boolean(p));
 
   if (products.length === 0) {

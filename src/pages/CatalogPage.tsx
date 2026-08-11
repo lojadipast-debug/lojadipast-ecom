@@ -2,14 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { SlidersHorizontal, X, ChevronDown, Check } from 'lucide-react';
 import { ProductCard } from '@/components/ProductCard';
 import { useRouter } from '@/store/router';
-import {
-  PRODUCTS,
-  CATEGORY_LABELS,
-  AGE_LABELS,
-  BRANDS,
-} from '@/data/catalog';
+import { CATEGORY_LABELS, AGE_LABELS, BRANDS } from '@/data/catalog';
 import type { Category, AgeGroup, BrandName } from '@/data/catalog';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
+import { useProducts } from '@/store/products';
 
 type SortKey = 'novidades' | 'maisvendidos' | 'precoasc' | 'precodesc';
 
@@ -26,6 +22,7 @@ const ALL_AGES: AgeGroup[] = ['0-3m', '3-12m', '1-3a', '3-6a', '6-10a'];
 export function CatalogPage({ category }: { category?: string }) {
   useScrollReveal();
   const { navigate } = useRouter();
+  const { products, loading, error } = useProducts();
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const [selectedCats, setSelectedCats] = useState<Set<Category>>(
@@ -71,18 +68,18 @@ export function CatalogPage({ category }: { category?: string }) {
 
   const allColors = useMemo(() => {
     const map = new Map<string, string>();
-    PRODUCTS.forEach((p) => p.colors.forEach((c) => map.set(c.name, c.hex)));
+    products.forEach((p) => p.colors.forEach((c) => map.set(c.name, c.hex)));
     return Array.from(map, ([name, hex]) => ({ name, hex }));
-  }, []);
+  }, [products]);
 
   const allSizes = useMemo(() => {
     const set = new Set<string>();
-    PRODUCTS.forEach((p) => p.sizes.forEach((s) => set.add(s)));
+    products.forEach((p) => p.sizes.forEach((s) => set.add(s)));
     return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   }, []);
 
   const filtered = useMemo(() => {
-    let list = [...PRODUCTS];
+    let list = [...products];
 
     if (special && category === 'novidades') list = list.filter((p) => p.isNew);
     if (special && category === 'promocoes') list = list.filter((p) => p.isPromo);
@@ -122,6 +119,7 @@ export function CatalogPage({ category }: { category?: string }) {
     onlyPromo,
     onlyNew,
     sort,
+    products,
   ]);
 
   const title = special
@@ -217,6 +215,15 @@ export function CatalogPage({ category }: { category?: string }) {
         </div>
       </div>
 
+      {loading ? (
+        <div className="mt-8 rounded-3xl bg-white py-20 text-center text-sm text-ink-500 ring-1 ring-ink-100">
+          A carregar o catálogo…
+        </div>
+      ) : error ? (
+        <div className="mt-8 rounded-3xl bg-white py-20 text-center text-sm text-rose-600 ring-1 ring-rose-100">
+          Não foi possível carregar o catálogo. Tenta novamente mais tarde.
+        </div>
+      ) : (
       <div className="mt-8 grid gap-8 lg:grid-cols-[260px_1fr]">
         {/* desktop filters */}
         <aside className="hidden lg:block">
@@ -267,6 +274,7 @@ export function CatalogPage({ category }: { category?: string }) {
           )}
         </div>
       </div>
+      )}
 
       {/* mobile filters drawer */}
       {filtersOpen && (

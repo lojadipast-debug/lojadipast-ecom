@@ -7,6 +7,7 @@ import { useCart } from '@/store/cart';
 
 interface OrderData {
   id: string;
+  order_number: string | null;
   total: number;
   status: string;
   customer_name: string;
@@ -31,7 +32,7 @@ export function CheckoutSuccessPage() {
       }
       const { data, error } = await supabase
         .from('orders')
-        .select('id, total, status, customer_name, shipping_method')
+        .select('id, order_number, total, status, customer_name, shipping_method')
         .eq('id', orderId)
         .maybeSingle();
 
@@ -64,7 +65,7 @@ export function CheckoutSuccessPage() {
         <p className="mt-3 text-ink-600">
           Obrigado pela tua compra{order ? `, ${order.customer_name.split(' ')[0]}` : ''}!
           {order && (
-            <> A tua encomenda <span className="font-semibold text-ink-900">#{order.id.slice(0, 8).toUpperCase()}</span> foi confirmada.</>
+            <> A tua encomenda <span className="font-semibold text-ink-900">#{order.order_number ?? order.id.slice(0, 8).toUpperCase()}</span> foi confirmada.</>
           )}
           {' '}Vamos prepará-la com todo o carinho.
         </p>

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Instagram, Facebook, Mail, Heart, ArrowRight, Check, Phone } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Instagram, Facebook, Mail, Heart, ArrowRight, Check, Phone, X, Shield } from 'lucide-react';
 import { DipaLogo } from './DipaLogo';
 import { useRouter } from '@/store/router';
 import { useAccount } from '@/store/account';
@@ -10,6 +10,75 @@ const SOCIAL = [
   { Icon: Instagram, label: 'Instagram @lojas_dipa', href: 'https://www.instagram.com/lojas_dipa/' },
   { Icon: Facebook, label: 'Facebook Dipa', href: 'https://www.facebook.com/profile.php?id=61579285052792&locale=pt_PT' },
 ] as const;
+
+const INFO_CONTENT: Record<string, { title: string; body: React.ReactNode }> = {
+  sobre: {
+    title: 'Sobre Nós',
+    body: (
+      <>
+        <p>A Dipa nasceu do amor pelos mais pequenos. Somos uma loja portuguesa dedicada a roupa, brinquedos, mochilas e acessórios infantis de qualidade premium, pensados para acompanhar cada fase da infância com conforto e carinho.</p>
+        <p>Trabalhamos com materiais certificados, algodões orgânicos e tecidos suaves, sempre com atenção aos detalhes que fazem a diferença: costuras planas, botões de pressão seguros e acabamentos impecáveis.</p>
+        <p>A nossa missão é simples: oferecer aos pais produtos em que podem confiar, e às crianças peças que adoram usar.</p>
+      </>
+    ),
+  },
+  envios: {
+    title: 'Envios',
+    body: (
+      <>
+        <p><strong>Envio Standard (24-48h)</strong> — Grátis para encomendas acima de 50€. Para valores inferiores, o custo é de 4,90€.</p>
+        <p><strong>Envio Express (24h)</strong> — 9,90€. Entrega prioritária em Portugal Continental.</p>
+        <p>Encomendas processadas até às 15h são enviadas no mesmo dia útil. Ilhas (Madeira e Açores) podem ter 1-2 dias adicionais.</p>
+        <p>Receberás um email com o número de seguimento assim que a encomenda for expedida.</p>
+      </>
+    ),
+  },
+  trocas: {
+    title: 'Trocas e Devoluções',
+    body: (
+      <>
+        <p>Tens 30 dias para efetuar trocas ou devoluções a contar da data de receção da encomenda.</p>
+        <p><strong>Devoluções:</strong> Os artigos devem estar em estado novo, sem uso e com etiquetas. O reembolso é processado no método de pagamento original em 5-7 dias úteis.</p>
+        <p><strong>Trocas:</strong> Podes trocar por outro tamanho ou cor sem custos de envio adicional.</p>
+        <p>Para iniciar uma devolução ou troca, contacta-nos através do email lojadipast@gmail.com com o número da encomenda.</p>
+      </>
+    ),
+  },
+  contactos: {
+    title: 'Contactos',
+    body: (
+      <>
+        <p>Estamos aqui para ajudar! Contacta-nos através de qualquer um dos canais abaixo:</p>
+        <p><strong>Telefone:</strong> +351 933 968 223</p>
+        <p><strong>Email:</strong> lojadipast@gmail.com</p>
+        <p><strong>Instagram:</strong> @lojas_dipa</p>
+        <p><strong>Facebook:</strong> Dipa</p>
+        <p><strong>Horário de atendimento:</strong> Segunda a Sábado, 9h às 18h.</p>
+      </>
+    ),
+  },
+  privacidade: {
+    title: 'Política de Privacidade',
+    body: (
+      <>
+        <p>A Dipa respeita a tua privacidade. Os dados pessoais recolhidos (nome, email, morada, telefone, NIF) são utilizados exclusivamente para processar encomendas, comunicações de serviço e melhorar a tua experiência de compra.</p>
+        <p>Não partilhamos os teus dados com terceiros para fins comerciais. Os dados são armazenados de forma segura e podes solicitar o acesso, retificação ou eliminação dos mesmos a qualquer momento.</p>
+        <p>Ao criares uma conta ou efetuares uma compra, aceitas a recolha e uso dos teus dados conforme descrito.</p>
+      </>
+    ),
+  },
+  termos: {
+    title: 'Termos e Condições',
+    body: (
+      <>
+        <p>A utilização deste site implica a aceitação dos presentes termos. Todos os produtos apresentados estão sujeitos a disponibilidade de stock.</p>
+        <p>Os preços apresentados incluem IVA à taxa legal em vigor. A Dipa reserva-se o direito de alterar preços e promoções sem aviso prévio.</p>
+        <p>As encomendas estão sujeitas a confirmação de pagamento. Em caso de falha de pagamento, a encomenda será cancelada automaticamente.</p>
+        <p>Para qualquer disputa, aplica-se a legislação portuguesa e a jurisdição dos tribunais de Portugal.</p>
+      </>
+    ),
+  },
+};
 
 const LINKS = [
   {
@@ -26,17 +95,17 @@ const LINKS = [
   {
     title: 'Apoio',
     items: [
-      { label: 'Sobre Nós', to: '/sobre' },
-      { label: 'Envios', to: '/envios' },
-      { label: 'Trocas e Devoluções', to: '/trocas' },
-      { label: 'Contactos', to: '/contactos' },
+      { label: 'Sobre Nós', modalKey: 'sobre' },
+      { label: 'Envios', modalKey: 'envios' },
+      { label: 'Trocas e Devoluções', modalKey: 'trocas' },
+      { label: 'Contactos', modalKey: 'contactos' },
     ],
   },
   {
     title: 'Legal',
     items: [
-      { label: 'Política de Privacidade', to: '/privacidade' },
-      { label: 'Termos', to: '/termos' },
+      { label: 'Política de Privacidade', modalKey: 'privacidade' },
+      { label: 'Termos', modalKey: 'termos' },
       { label: 'A minha conta', to: '/conta/perfil' },
     ],
   },
@@ -47,6 +116,7 @@ export function Footer() {
   const { user } = useAccount();
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
+  const [modalKey, setModalKey] = useState<string | null>(null);
 
   const isAdmin = user?.email === ADMIN_EMAIL;
 
@@ -57,6 +127,17 @@ export function Footer() {
     setEmail('');
     setTimeout(() => setSent(false), 3500);
   };
+
+  useEffect(() => {
+    if (!modalKey) return;
+    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') setModalKey(null); };
+    window.addEventListener('keydown', onEsc);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onEsc);
+      document.body.style.overflow = '';
+    };
+  }, [modalKey]);
 
   return (
     <footer className="mt-24 bg-cream-100">
@@ -136,7 +217,7 @@ export function Footer() {
               {group.items.map((item) => (
                 <li key={item.label}>
                   <button
-                    onClick={() => navigate(item.to)}
+                    onClick={() => 'modalKey' in item && item.modalKey ? setModalKey(item.modalKey) : navigate(item.to!)}
                     className="group flex items-center gap-1.5 text-sm text-ink-600 transition-colors hover:text-lilac-700"
                   >
                     <span className="h-px w-0 bg-lilac-500 transition-all duration-300 group-hover:w-3" />
@@ -149,22 +230,51 @@ export function Footer() {
         ))}
       </div>
 
+      {/* Info modal */}
+      {modalKey && INFO_CONTENT[modalKey] && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-ink-900/50 p-4 backdrop-blur-sm animate-fade-in"
+          onClick={() => setModalKey(null)}
+        >
+          <div
+            className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-8 shadow-soft-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <h3 className="font-display text-2xl font-bold text-ink-900">{INFO_CONTENT[modalKey].title}</h3>
+              <button
+                onClick={() => setModalKey(null)}
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-cream-100 text-ink-500 transition-colors hover:bg-ink-100"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="mt-5 space-y-4 text-sm leading-relaxed text-ink-700">
+              {INFO_CONTENT[modalKey].body}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* bottom bar */}
       <div className="container-x mt-14 flex flex-col items-center justify-between gap-4 border-t border-ink-100 py-7 text-xs font-medium text-ink-500 sm:flex-row">
-        <p>© {new Date().getFullYear()} Dipa. Feito com carinho em Portugal.</p>
+        <div className="flex items-center gap-3">
+          <p>© {new Date().getFullYear()} Dipa. Feito com carinho em Portugal.</p>
+          {isAdmin && (
+            <button
+              onClick={() => navigate('/admin')}
+              className="inline-flex items-center gap-1.5 rounded-full bg-lilac-100 px-3 py-1.5 text-xs font-bold text-lilac-700 ring-1 ring-lilac-200 transition-all hover:bg-lilac-200 hover:ring-lilac-300"
+              aria-label="Painel de administração"
+              title="Painel de administração"
+            >
+              <Shield size={13} />
+              Admin
+            </button>
+          )}
+        </div>
         <p className="flex items-center gap-1.5">
           Desenhado com <Heart size={12} className="fill-rose-400 text-rose-400" /> para a infância
         </p>
-        {isAdmin && (
-          <button
-            onClick={() => navigate('/admin')}
-            className="text-ink-300 transition-colors hover:text-ink-500"
-            aria-label="Painel de administração"
-            title="Admin"
-          >
-            Admin
-          </button>
-        )}
       </div>
     </footer>
   );

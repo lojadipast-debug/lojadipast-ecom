@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Search, X, TrendingUp } from 'lucide-react';
 import { useRouter } from '@/store/router';
-import { PRODUCTS, formatPrice, CATEGORY_LABELS } from '@/data/catalog';
+import { formatPrice, CATEGORY_LABELS } from '@/data/catalog';
+import { useProducts } from '@/store/products';
 
 interface SearchOverlayProps {
   open: boolean;
@@ -12,6 +13,7 @@ const SUGGESTED = ['Conjunto', 'Mochila', 'Urso', 'Vestido', 'Sapatilhas'];
 
 export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
   const { navigate } = useRouter();
+  const { products } = useProducts();
   const [query, setQuery] = useState('');
 
   useEffect(() => {
@@ -29,13 +31,13 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return [];
-    return PRODUCTS.filter(
+    return products.filter(
       (p) =>
         p.name.toLowerCase().includes(q) ||
         p.brand.toLowerCase().includes(q) ||
         CATEGORY_LABELS[p.category].toLowerCase().includes(q)
     ).slice(0, 5);
-  }, [query]);
+  }, [query, products]);
 
   if (!open) return null;
 

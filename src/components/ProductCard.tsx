@@ -1,7 +1,7 @@
 import { Heart, ShoppingBag } from 'lucide-react';
 import { useRouter } from '@/store/router';
 import { useCart } from '@/store/cart';
-import { formatPrice } from '@/data/catalog';
+import { formatPrice, effectivePrice, effectiveOldPrice, isOutOfStock, isPromoActiveNow } from '@/data/catalog';
 import type { Product } from '@/data/catalog';
 import { StarRating } from './StarRating';
 
@@ -14,8 +14,12 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
   const { navigate } = useRouter();
   const { toggleFavorite, isFavorite, addToCart } = useCart();
   const fav = isFavorite(product.id);
-  const discount = product.oldPrice
-    ? Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100)
+  const outOfStock = isOutOfStock(product);
+  const promoNow = isPromoActiveNow(product);
+  const currentPrice = effectivePrice(product);
+  const oldPrice = effectiveOldPrice(product);
+  const discount = oldPrice
+    ? Math.round(((oldPrice - currentPrice) / oldPrice) * 100)
     : 0;
 
   return (
@@ -51,12 +55,17 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
               Novo
             </span>
           )}
-          {product.isPromo && discount > 0 && (
+          {(product.isPromo || promoNow) && discount > 0 && (
             <span className="rounded-full bg-rose-300 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-ink-900 shadow-soft">
               -{discount}%
             </span>
           )}
-          {product.bestSeller && !product.isNew && !product.isPromo && (
+          {outOfStock && (
+            <span className="rounded-full bg-ink-900 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-white shadow-soft">
+              Esgotado
+            </span>
+          )}
+          {product.bestSeller && !product.isNew && !product.isPromo && !promoNow && !outOfStock && (
             <span className="rounded-full bg-cream-300 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-ink-900 shadow-soft">
               Top
             </span>
@@ -81,19 +90,21 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
       </button>
 
       {/* quick add */}
-      <button
-        onClick={() =>
-          addToCart({
-            productId: product.id,
-            size: product.sizes[0] ?? 'Único',
-            color: product.colors[0]?.name ?? 'Padrão',
-            quantity: 1,
-          })
-        }
-        className="pointer-events-none absolute bottom-4 left-1/2 flex -translate-x-1/2 translate-y-4 items-center gap-2 rounded-full bg-ink-900 px-5 py-2.5 text-xs font-bold text-white opacity-0 shadow-soft-lg transition-all duration-300 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100 hover:bg-lilac-700"
-      >
-        <ShoppingBag size={14} /> Adicionar
-      </button>
+      {!outOfStock && (
+        <button
+          onClick={() =>
+            addToCart({
+              productId: product.id,
+              size: product.sizes[0] ?? 'Único',
+              color: product.colors[0]?.name ?? 'Padrão',
+              quantity: 1,
+            })
+          }
+          className="pointer-events-none absolute bottom-4 left-1/2 flex -translate-x-1/2 translate-y-4 items-center gap-2 rounded-full bg-ink-900 px-5 py-2.5 text-xs font-bold text-white opacity-0 shadow-soft-lg transition-all duration-300 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100 hover:bg-lilac-700"
+        >
+          <ShoppingBag size={14} /> Adicionar
+        </button>
+      )}
 
       <div className="mt-4 flex flex-1 flex-col">
         <div className="flex items-center justify-between gap-2">
@@ -109,10 +120,10 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
           {product.name}
         </h3>
         <div className="mt-2 flex items-center gap-2">
-          <span className="font-display text-base font-extrabold text-ink-900">{formatPrice(product.price)}</span>
-          {product.oldPrice && (
+          <span className="font-display text-base font-extrabold text-ink-900">{formatPrice(currentPrice)}</span>
+          {oldPrice && oldPrice > currentPrice && (
             <span className="text-sm text-ink-400 line-through">
-              {formatPrice(product.oldPrice)}
+              {formatPrice(oldPrice)}
             </span>
           )}
         </div>

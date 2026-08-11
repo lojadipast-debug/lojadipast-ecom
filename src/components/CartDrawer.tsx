@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { X, ShoppingBag, Plus, Minus, Trash2, ArrowRight } from 'lucide-react';
 import { useCart } from '@/store/cart';
 import { useRouter } from '@/store/router';
-import { formatPrice } from '@/data/catalog';
+import { formatPrice, effectivePrice } from '@/data/catalog';
 
 const FREE_SHIPPING = 50;
 
@@ -122,7 +122,7 @@ export function CartDrawer() {
                           </button>
                         </div>
                         <span className="text-sm font-semibold text-ink-900">
-                          {formatPrice(item.product.price * item.quantity)}
+                          {formatPrice(effectivePrice(item.product) * item.quantity)}
                         </span>
                       </div>
                     </div>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Search, Heart, User, ShoppingBag, Menu, X, ChevronRight, Phone, Instagram, Facebook, Shield } from 'lucide-react';
+import { Search, Heart, User, ShoppingBag, Menu, X, ChevronRight, Phone, Instagram, Facebook } from 'lucide-react';
 import { DipaLogo } from './DipaLogo';
 import { useRouter } from '@/store/router';
 import { useCart } from '@/store/cart';
@@ -27,15 +27,12 @@ const SUBCATEGORIES: Record<Category, string[]> = {
   acessorios: ['Calçado', 'Mantas', 'Laços', 'Chapeus', 'Meias'],
 };
 
-const ADMIN_EMAILS = ['blegend1080@gmail.com'];
-
 const ANNOUNCE = ['Envios grátis acima de 50€', 'Trocas fáceis em 30 dias', 'Feito com carinho para os mais pequenos', '10% na primeira compra com DIPA10'];
 
 export function Header({ onOpenSearch }: { onOpenSearch: () => void }) {
   const { navigate, path } = useRouter();
   const { cartCount, favorites, openCart } = useCart();
   const { user } = useAccount();
-  const isAdmin = user?.email && ADMIN_EMAILS.includes(user.email);
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [megaKey, setMegaKey] = useState<Category | null>(null);
@@ -160,11 +157,6 @@ export function Header({ onOpenSearch }: { onOpenSearch: () => void }) {
                   <Badge className="bg-rose-400">{favorites.length}</Badge>
                 )}
               </IconBtn>
-              {isAdmin && (
-                <IconBtn onClick={() => go('/admin')} label="Painel admin" hoverLilac className="relative">
-                  <Shield size={19} />
-                </IconBtn>
-              )}
               <IconBtn onClick={() => go(user ? '/conta/perfil' : '/conta/login')} label="Conta" hoverSky>
                 <User size={19} />
               </IconBtn>

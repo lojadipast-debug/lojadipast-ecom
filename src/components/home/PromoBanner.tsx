@@ -12,10 +12,10 @@ export function PromoBanner() {
           <div className="absolute -right-12 -top-12 h-56 w-56 rounded-full bg-rose-300/50 blur-3xl" />
           <div className="absolute -bottom-16 left-1/3 h-48 w-48 rounded-full bg-lilac-300/50 blur-3xl" />
           {/* rotating badge */}
-          <div className="absolute right-8 top-8 z-10 hidden h-24 w-24 animate-spin-slow items-center justify-center rounded-full bg-rose-500 text-white shadow-soft-lg sm:flex">
+          <div className="absolute right-6 top-6 z-10 hidden h-16 w-16 animate-spin-slow items-center justify-center rounded-full bg-rose-500 text-white shadow-soft sm:flex">
             <div className="text-center leading-none">
-              <div className="font-display text-2xl font-extrabold">-30%</div>
-              <div className="text-[9px] font-bold uppercase tracking-wider">Oferta</div>
+              <div className="font-display text-base font-extrabold">-30%</div>
+              <div className="text-[8px] font-bold uppercase tracking-wider">Oferta</div>
             </div>
           </div>
           <div className="relative flex flex-col items-start">
@@ -44,7 +44,7 @@ export function PromoBanner() {
           <img
             src="https://images.pexels.com/photos/1974656/pexels-photo-1974656.jpeg?auto=compress&cs=tinysrgb&h=420&w=420"
             alt="Pelúcias em fundo pastel"
-            className="pointer-events-none absolute bottom-0 right-0 hidden h-80 w-80 translate-x-10 translate-y-6 rotate-6 object-cover rounded-tl-[7rem] rounded-br-[7rem] shadow-soft-lg lg:block"
+            className="pointer-events-none absolute bottom-0 right-0 hidden h-52 w-52 translate-x-6 translate-y-4 rotate-6 object-cover rounded-tl-[5rem] rounded-br-[5rem] shadow-soft-lg lg:block"
           />
         </div>
 
@@ -69,7 +69,7 @@ export function PromoBanner() {
           <img
             src="https://images.pexels.com/photos/4910563/pexels-photo-4910563.jpeg?auto=compress&cs=tinysrgb&h=320&w=320"
             alt=""
-            className="pointer-events-none absolute -right-6 bottom-0 h-40 w-40 rotate-12 rounded-3xl object-cover opacity-90 shadow-soft"
+            className="pointer-events-none absolute -right-4 bottom-0 h-28 w-28 rotate-12 rounded-2xl object-cover opacity-90 shadow-soft"
           />
         </div>
       </div>

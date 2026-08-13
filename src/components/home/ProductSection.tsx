@@ -3,11 +3,12 @@ import { ArrowRight, Flame, Tag } from 'lucide-react';
 import { ProductCard } from '@/components/ProductCard';
 import { useRouter } from '@/store/router';
 import { useProducts } from '@/store/products';
+import { isPromoActiveNow, isNewWithin10Days, promoDiscountPercent } from '@/data/catalog';
 
 interface Props {
   title: string;
   eyebrow: string;
-  filter: 'isFeatured' | 'isNew' | 'isPromo';
+  filter: 'isFeatured' | 'isNew' | 'isPromo' | 'autoFeatured';
   cta?: string;
   ctaTo?: string;
 }
@@ -15,8 +16,32 @@ interface Props {
 export function ProductSection({ title, eyebrow, filter, cta, ctaTo }: Props) {
   const { navigate } = useRouter();
   const { products: allProducts } = useProducts();
-  const products = allProducts.filter((p) => p[filter]).slice(0, 8);
   const [tab, setTab] = useState(0);
+
+  let products: typeof allProducts;
+
+  if (filter === 'autoFeatured') {
+    const bestSellers = allProducts
+      .filter((p) => p.bestSeller)
+      .sort((a, b) => (b.reviewsCount ?? 0) - (a.reviewsCount ?? 0));
+    const withDiscount = allProducts
+      .filter((p) => isPromoActiveNow(p) && !p.bestSeller)
+      .sort((a, b) => promoDiscountPercent(b) - promoDiscountPercent(a));
+    const combined = [...bestSellers, ...withDiscount];
+    const seen = new Set<string>();
+    products = combined.filter((p) => {
+      if (seen.has(p.id)) return false;
+      seen.add(p.id);
+      return true;
+    }).slice(0, 12);
+  } else if (filter === 'isPromo') {
+    products = allProducts.filter((p) => p.isPromo || isPromoActiveNow(p)).slice(0, 20);
+  } else if (filter === 'isNew') {
+    products = allProducts.filter((p) => p.isNew || isNewWithin10Days(p)).slice(0, 20);
+  } else {
+    products = allProducts.filter((p) => p.isFeatured).slice(0, 12);
+  }
+
   const isPromo = filter === 'isPromo';
 
   return (

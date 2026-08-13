@@ -42,6 +42,7 @@ interface ProductRow {
   promo_price: string | number | null;
   promo_start_date: string | null;
   promo_end_date: string | null;
+  created_at: string | null;
 }
 
 function mapRow(row: ProductRow): Product {
@@ -71,11 +72,12 @@ function mapRow(row: ProductRow): Product {
     promoPrice: row.promo_price != null ? Number(row.promo_price) : undefined,
     promoStartDate: row.promo_start_date,
     promoEndDate: row.promo_end_date,
+    createdAt: row.created_at,
   };
 }
 
 const SELECT_COLUMNS =
-  'id, name, category, age_group, brand, price, old_price, colors, sizes, images, description, details, rating, reviews_count, is_featured, is_new, is_promo, best_seller, stock_status, has_sizes, has_colors, stock_quantity, subcategory, promo_active, promo_original_price, promo_price, promo_start_date, promo_end_date';
+  'id, name, category, age_group, brand, price, old_price, colors, sizes, images, description, details, rating, reviews_count, is_featured, is_new, is_promo, best_seller, stock_status, has_sizes, has_colors, stock_quantity, subcategory, promo_active, promo_original_price, promo_price, promo_start_date, promo_end_date, created_at';
 
 export function ProductsProvider({ children }: { children: ReactNode }) {
   const [products, setProducts] = useState<Product[]>([]);
@@ -144,6 +146,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
   return <ProductsContext.Provider value={value}>{children}</ProductsContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useProducts(): ProductsContextValue {
   const ctx = useContext(ProductsContext);
   if (!ctx) throw new Error('useProducts must be used within ProductsProvider');

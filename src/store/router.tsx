@@ -44,40 +44,12 @@ export function RouterProvider({ children }: { children: ReactNode }) {
   return <RouterContext.Provider value={{ path, navigate }}>{children}</RouterContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useRouter(): RouterContextValue {
   const ctx = useContext(RouterContext);
   if (!ctx) throw new Error('useRouter must be used within RouterProvider');
   return ctx;
 }
 
-export function parseRoute(path: string): Route {
-  // Limpa tudo o que estiver no URL (hash, pathname ou barras extras)
-  const hash = window.location.hash.replace(/^#\/?/, '');
-  const pathname = window.location.pathname.replace(/^\//, '');
-  const currentPath = hash || pathname || path;
-
-  const clean = currentPath.split('?')[0];
-  const segments = clean.split('/').filter(Boolean);
-
-  if (segments.length === 0) return { name: 'home' };
-
-  if (segments.includes('admin')) return { name: 'admin' };
-  if (segments[0] === 'catalogo') return { name: 'catalog', category: segments[1] };
-  if (segments[0] === 'produto' && segments[1]) return { name: 'product', id: segments[1] };
-  if (segments[0] === 'carrinho') return { name: 'cart' };
-  if (segments[0] === 'checkout') return { name: 'checkout' };
-  if (segments[0] === 'checkout-success') return { name: 'checkout-success' };
-  if (segments[0] === 'conta') return { name: 'account', section: segments[1] ?? 'perfil' };
-
-  return { name: 'home' };
-}
-
-export type Route =
-  | { name: 'home' }
-  | { name: 'catalog'; category?: string }
-  | { name: 'product'; id: string }
-  | { name: 'cart' }
-  | { name: 'checkout' }
-  | { name: 'checkout-success' }
-  | { name: 'account'; section: string }
-  | { name: 'admin' };
+// eslint-disable-next-line react-refresh/only-export-components
+export { parseRoute, type Route } from '@/utils/router';

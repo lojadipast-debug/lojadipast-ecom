@@ -19,7 +19,7 @@ export interface StoredCartItem extends CartItem {
 interface CartContextValue {
   items: StoredCartItem[];
   favorites: string[];
-  addToCart: (item: CartItem) => void;
+  addToCart: (item: CartItem) => { ok: boolean; message?: string };
   removeFromCart: (key: string) => void;
   updateQuantity: (key: string, quantity: number) => void;
   clearCart: () => void;
@@ -67,23 +67,31 @@ export function CartProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(FAV_KEY, JSON.stringify(favorites));
   }, [favorites]);
 
-  const addToCart = useCallback((item: CartItem) => {
+  const addToCart = useCallback((item: CartItem): { ok: boolean; message?: string } => {
     const key = cartItemKey(item);
+    const product = getProductById(item.productId);
+    const stock = product?.stockQuantity ?? 0;
+    const existing = rawItems.find((p) => cartItemKey(p) === key);
+    const nextQuantity = Math.min(stock, (existing?.quantity ?? 0) + item.quantity);
+
+    if (stock <= 0) return { ok: false, message: 'Produto esgotado.' };
+    if (nextQuantity <= (existing?.quantity ?? 0)) {
+      return { ok: false, message: `Apenas ${stock} em stock.` };
+    }
+
     setRawItems((prev) => {
-      const existing = prev.find((p) => cartItemKey(p) === key);
-      const product = getProductById(item.productId);
-      const stock = product?.stockQuantity ?? 0;
-      if (stock <= 0) return prev;
-      if (existing) {
+      const current = prev.find((p) => cartItemKey(p) === key);
+      if (current) {
         return prev.map((p) =>
           cartItemKey(p) === key ? { ...p, quantity: Math.min(stock, p.quantity + item.quantity) } : p
         );
       }
-      return [...prev, item];
+      return [...prev, { ...item, quantity: Math.min(stock, item.quantity) }];
     });
     setLastAddedKey(key);
     setIsOpen(true);
-  }, [getProductById]);
+    return { ok: true };
+  }, [getProductById, rawItems]);
 
   const removeFromCart = useCallback((key: string) => {
     setRawItems((prev) => prev.filter((p) => cartItemKey(p) !== key));
@@ -95,9 +103,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return;
     }
     setRawItems((prev) =>
-      prev.map((p) => (cartItemKey(p) === key ? { ...p, quantity } : p))
+      prev.map((p) => {
+        if (cartItemKey(p) !== key) return p;
+        const stock = getProductById(p.productId)?.stockQuantity ?? 0;
+        return { ...p, quantity: Math.min(quantity, stock) };
+      })
     );
-  }, []);
+  }, [getProductById]);
 
   const clearCart = useCallback(() => setRawItems([]), []);
 
@@ -150,6 +162,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useCart(): CartContextValue {
   const ctx = useContext(CartContext);
   if (!ctx) throw new Error('useCart must be used within CartProvider');

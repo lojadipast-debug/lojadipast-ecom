@@ -8,6 +8,7 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { CartDrawer } from '@/components/CartDrawer';
 import { SearchOverlay } from '@/components/SearchOverlay';
+import { SignupPopup } from '@/components/SignupPopup';
 import { HomePage } from '@/pages/HomePage';
 import { CatalogPage } from '@/pages/CatalogPage';
 import { ProductPage } from '@/pages/ProductPage';
@@ -15,6 +16,7 @@ import { CartPage } from '@/pages/CartPage';
 import { CheckoutPage } from '@/pages/CheckoutPage';
 import { CheckoutSuccessPage } from '@/pages/CheckoutSuccessPage';
 import { AccountPage } from '@/pages/AccountPage';
+import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
 import { AdminPage } from '@/pages/AdminPage';
 
 function AppRoutes() {
@@ -44,10 +46,12 @@ function AppRoutes() {
         {route.name === 'checkout' && <CheckoutPage />}
         {route.name === 'checkout-success' && <CheckoutSuccessPage />}
         {route.name === 'account' && <AccountPage section={route.section ?? 'perfil'} />}
+        {route.name === 'reset-password' && <ResetPasswordPage />}
       </main>
       <Footer />
       <CartDrawer />
       <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <SignupPopup />
       <BackToTop />
     </div>
   );
@@ -69,6 +73,8 @@ function titleFor(route: ReturnType<typeof parseRoute>): string {
       return 'Encomenda confirmada · Dipa';
     case 'account':
       return 'A minha conta · Dipa';
+    case 'reset-password':
+      return 'Redefinir palavra-passe · Dipa';
     case 'admin':
       return 'Painel de administração · Dipa';
   }

@@ -29,6 +29,7 @@ import { ProductCard } from '@/components/ProductCard';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
 import { Modal } from '@/components/Modal';
 import { supabase } from '@/lib/supabase';
+import { PhoneInput, DEFAULT_COUNTRY, isValidPhone, parseStoredPhone } from '@/components/PhoneInput';
 
 const SECTIONS = [
   { key: 'perfil', label: 'Perfil', Icon: UserIcon },
@@ -174,7 +175,8 @@ export function AccountPage({ section }: { section: string }) {
 function ProfileSection() {
   const { user, saveProfile } = useAccount();
   const [name, setName] = useState(user?.name ?? '');
-  const [phone, setPhone] = useState(user?.phone ?? '');
+  const [phone, setPhone] = useState('');
+  const [phoneDial, setPhoneDial] = useState(DEFAULT_COUNTRY.dial);
   const [birthDate, setBirthDate] = useState(user?.birthDate ?? '');
   const [saving, setSaving] = useState(false);
   const [state, setState] = useState<'idle' | 'success' | 'error'>('idle');
@@ -184,8 +186,10 @@ function ProfileSection() {
   useEffect(() => {
     if (user) {
       setName(user.name);
-      setPhone(user.phone);
       setBirthDate(user.birthDate);
+      const parsed = parseStoredPhone(user.phone);
+      setPhoneDial(parsed.dial);
+      setPhone(parsed.phone);
     }
   }, [user]);
 
@@ -199,8 +203,8 @@ function ProfileSection() {
     const phoneDigits = phone.replace(/\D/g, '');
     if (!phone.trim()) {
       errs.phone = 'O telefone é obrigatório.';
-    } else if (phoneDigits.length < 9) {
-      errs.phone = 'Introduz um telefone válido (mínimo 9 dígitos).';
+    } else if (!isValidPhone(phoneDial, phone)) {
+      errs.phone = 'Introduz um telefone válido (entre 6 e 9 dígitos).';
     }
 
     const parts = birthDate.split('-');
@@ -241,7 +245,7 @@ function ProfileSection() {
     setState('idle');
     setMessage('');
 
-    const res = await saveProfile({ name: name.trim(), phone: phone.trim(), birthDate });
+    const res = await saveProfile({ name: name.trim(), phone: `${phoneDial} ${phone}`.trim(), birthDate });
     if (res.ok) {
       setState('success');
       setMessage('Alterações guardadas com sucesso!');
@@ -262,7 +266,15 @@ function ProfileSection() {
           </div>
           <Field label="Email" value={user?.email ?? ''} disabled />
           <div>
-            <Field label="Telefone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+351 912 345 678" required />
+            <PhoneInput
+              label="Telefone"
+              dialCode={phoneDial}
+              onDialCodeChange={setPhoneDial}
+              phone={phone}
+              onPhoneChange={setPhone}
+              placeholder="912 345 678"
+              required
+            />
             {errors.phone && <p className="mt-1.5 text-xs font-medium text-rose-600">{errors.phone}</p>}
           </div>
           <div>
@@ -425,9 +437,18 @@ function AddressModal({
   const [postal, setPostal] = useState(editing?.postal ?? '');
   const [city, setCity] = useState(editing?.city ?? '');
   const [country, setCountry] = useState(editing?.country ?? 'Portugal');
-  const [phone, setPhone] = useState(editing?.phone ?? '');
+  const [phone, setPhone] = useState('');
+  const [phoneDial, setPhoneDial] = useState(DEFAULT_COUNTRY.dial);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (editing?.phone) {
+      const parsed = parseStoredPhone(editing.phone);
+      setPhoneDial(parsed.dial);
+      setPhone(parsed.phone);
+    }
+  }, [editing]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -446,6 +467,12 @@ function AddressModal({
       return;
     }
 
+    if (phone.trim() && !isValidPhone(phoneDial, phone)) {
+      setError('Introduz um número de telefone válido.');
+      setSaving(false);
+      return;
+    }
+
     const res = await onSave({
       id: editing?.id,
       label: label.trim() || (buildingType === 'casa' ? 'Casa' : 'Apartamento'),
@@ -457,7 +484,7 @@ function AddressModal({
       postal: postal.trim(),
       city: city.trim(),
       country: country.trim() || 'Portugal',
-      phone: phone.trim(),
+      phone: phone.trim() ? `${phoneDial} ${phone}`.trim() : '',
     });
 
     if (!res.ok) {
@@ -524,7 +551,14 @@ function AddressModal({
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="País" value={country} onChange={(e) => setCountry(e.target.value)} placeholder="Portugal" />
-            <Field label="Telefone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+351 912 345 678" />
+            <PhoneInput
+              label="Telefone"
+              dialCode={phoneDial}
+              onDialCodeChange={setPhoneDial}
+              phone={phone}
+              onPhoneChange={setPhone}
+              placeholder="912 345 678"
+            />
           </div>
 
           {error && (
@@ -848,7 +882,7 @@ function ToggleRow({ label, desc, defaultChecked }: { label: string; desc: strin
 function AuthScreen() {
   const { login, register } = useAccount();
   const { navigate } = useRouter();
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [mode, setMode] = useState<'login' | 'register'>('register');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

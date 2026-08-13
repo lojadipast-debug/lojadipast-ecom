@@ -104,7 +104,8 @@ export function CheckoutPage() {
     }
   }, [user, addresses]);
 
-  const standardShipping = subtotal >= 50 ? 0 : 4.9;
+  // TEMPORÁRIO PARA TESTES: Portes grátis no envio Standard (mudado de 4.9 para 0)
+  const standardShipping = subtotal >= 50 ? 0 : 0;
   const shipping = shippingMethod === 'express' ? 9.9 : standardShipping;
   const total = subtotal + shipping;
 

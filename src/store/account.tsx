@@ -230,7 +230,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       phone: profile.phone.trim(),
       birth_date: profile.birthDate || null,
       updated_at: new Date().toISOString(),
-    });
+    }, { onConflict: 'user_id' });
     if (error) return { ok: false, error: 'Não foi possível guardar os teus dados.' };
 
     setUser((current) => current ? { ...current, name: profile.name.trim(), phone: profile.phone.trim(), birthDate: profile.birthDate } : current);

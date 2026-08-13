@@ -1,9 +1,8 @@
 import { Heart, ShoppingBag } from 'lucide-react';
 import { useRouter } from '@/store/router';
 import { useCart } from '@/store/cart';
-import { formatPrice, effectivePrice, effectiveOldPrice, isOutOfStock, isPromoActiveNow } from '@/data/catalog';
+import { formatPrice, effectivePrice, effectiveOldPrice, isOutOfStock, isPromoActiveNow, isNewWithin10Days } from '@/data/catalog';
 import type { Product } from '@/data/catalog';
-import { StarRating } from './StarRating';
 
 interface ProductCardProps {
   product: Product;
@@ -16,6 +15,7 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
   const fav = isFavorite(product.id);
   const outOfStock = isOutOfStock(product);
   const promoNow = isPromoActiveNow(product);
+  const showNew = product.isNew || isNewWithin10Days(product);
   const currentPrice = effectivePrice(product);
   const oldPrice = effectiveOldPrice(product);
   const discount = oldPrice
@@ -50,13 +50,13 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
 
         {/* badges */}
         <div className="absolute left-3.5 top-3.5 flex flex-col gap-1.5">
-          {product.isNew && (
+          {showNew && (
             <span className="rounded-full bg-sky-300 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-ink-900 shadow-soft">
               Novo
             </span>
           )}
           {(product.isPromo || promoNow) && discount > 0 && (
-            <span className="rounded-full bg-rose-300 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-ink-900 shadow-soft">
+            <span className="inline-flex items-center justify-center rounded-full bg-rose-500 px-2 py-1 text-[10px] font-extrabold leading-none text-white shadow-soft ring-1 ring-white/50">
               -{discount}%
             </span>
           )}
@@ -65,7 +65,7 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
               Esgotado
             </span>
           )}
-          {product.bestSeller && !product.isNew && !product.isPromo && !promoNow && !outOfStock && (
+          {product.bestSeller && !showNew && !product.isPromo && !promoNow && !outOfStock && (
             <span className="rounded-full bg-cream-300 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-ink-900 shadow-soft">
               Top
             </span>
@@ -92,14 +92,17 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
       {/* quick add */}
       {!outOfStock && (
         <button
-          onClick={() =>
-            addToCart({
+          onClick={() => {
+            const result = addToCart({
               productId: product.id,
               size: product.sizes[0] ?? 'Único',
               color: product.colors[0]?.name ?? 'Padrão',
               quantity: 1,
-            })
-          }
+            });
+            if (result.ok) {
+              window.dispatchEvent(new CustomEvent('dipa:signup-prompt', { detail: 'cart' }));
+            }
+          }}
           className="pointer-events-none absolute bottom-4 left-1/2 flex -translate-x-1/2 translate-y-4 items-center gap-2 rounded-full bg-ink-900 px-5 py-2.5 text-xs font-bold text-white opacity-0 shadow-soft-lg transition-all duration-300 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100 hover:bg-lilac-700"
         >
           <ShoppingBag size={14} /> Adicionar
@@ -107,12 +110,9 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
       )}
 
       <div className="mt-4 flex flex-1 flex-col">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-lilac-600">
-            {product.brand}
-          </span>
-          <StarRating rating={product.rating} size={12} />
-        </div>
+        <span className="text-[11px] font-bold uppercase tracking-wider text-lilac-600">
+          {product.brand}
+        </span>
         <h3
           className="mt-1.5 line-clamp-2 cursor-pointer font-display text-[15px] font-bold leading-snug text-ink-900 transition-colors hover:text-lilac-700"
           onClick={() => navigate(`/produto/${product.id}`)}

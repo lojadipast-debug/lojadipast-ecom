@@ -29,7 +29,8 @@ import { ProductCard } from '@/components/ProductCard';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
 import { Modal } from '@/components/Modal';
 import { supabase } from '@/lib/supabase';
-import { PhoneInput, DEFAULT_COUNTRY, isValidPhone, parseStoredPhone } from '@/components/PhoneInput';
+import { PhoneInput } from '@/components/PhoneInput';
+import { DEFAULT_COUNTRY, isValidPhone, parseStoredPhone } from '@/utils/phone';
 
 const SECTIONS = [
   { key: 'perfil', label: 'Perfil', Icon: UserIcon },
@@ -200,7 +201,6 @@ function ProfileSection() {
       errs.name = 'O nome completo é obrigatório.';
     }
 
-    const phoneDigits = phone.replace(/\D/g, '');
     if (!phone.trim()) {
       errs.phone = 'O telefone é obrigatório.';
     } else if (!isValidPhone(phoneDial, phone)) {

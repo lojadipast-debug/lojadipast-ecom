@@ -15,6 +15,9 @@ import {
   Ruler,
   Package,
   ChevronDown,
+  Tag,
+  Calendar,
+  Infinity as InfinityIcon,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from '@/store/router';
@@ -39,11 +42,17 @@ interface AdminProduct {
   subcategory: string | null;
   description: string;
   stock_status: string;
+  stock_quantity: number;
   images: string[];
   has_sizes: boolean;
   has_colors: boolean;
   sizes: string[];
   colors: ColorOption[];
+  promo_active: boolean;
+  promo_original_price: number | null;
+  promo_price: number | null;
+  promo_start_date: string | null;
+  promo_end_date: string | null;
 }
 
 interface AdminOrder {
@@ -99,8 +108,6 @@ const ORDER_STATUSES = [
   { value: 'cancelled', label: 'Cancelada' },
 ];
 
-const STOCK_OPTIONS = ['Disponivel', 'Sem stock'];
-
 const EMPTY_FORM = {
   id: '',
   name: '',
@@ -109,6 +116,7 @@ const EMPTY_FORM = {
   subcategory: '',
   description: '',
   stock_status: 'Disponivel',
+  stock_quantity: '10',
   images: [] as string[],
   has_sizes: true,
   has_colors: true,
@@ -117,6 +125,12 @@ const EMPTY_FORM = {
   newSize: '',
   newColorName: '',
   newColorHex: '#d7c6f2',
+  promo_active: false,
+  promo_discount_percent: '',
+  promo_price: '',
+  promo_infinite: true,
+  promo_start_date: '',
+  promo_end_date: '',
 };
 
 export function AdminPage() {
@@ -148,7 +162,7 @@ export function AdminPage() {
     setLoadingProducts(true);
     const { data, error } = await supabase
       .from('products')
-      .select('id, name, price, category, subcategory, description, stock_status, images, has_sizes, has_colors, sizes, colors')
+      .select('id, name, price, category, subcategory, description, stock_status, stock_quantity, images, has_sizes, has_colors, sizes, colors, promo_active, promo_original_price, promo_price, promo_start_date, promo_end_date')
       .order('created_at', { ascending: false });
 
     if (!error && data) {
@@ -212,6 +226,7 @@ export function AdminPage() {
   };
 
   const openEditForm = (p: AdminProduct) => {
+    const hasDates = !!(p.promo_start_date || p.promo_end_date);
     setForm({
       id: p.id,
       name: p.name,
@@ -220,6 +235,7 @@ export function AdminPage() {
       subcategory: p.subcategory ?? '',
       description: p.description ?? '',
       stock_status: p.stock_status ?? 'Disponivel',
+      stock_quantity: String(p.stock_quantity ?? 0),
       images: p.images ?? [],
       has_sizes: p.has_sizes ?? true,
       has_colors: p.has_colors ?? true,
@@ -228,6 +244,15 @@ export function AdminPage() {
       newSize: '',
       newColorName: '',
       newColorHex: '#d7c6f2',
+      promo_active: p.promo_active ?? false,
+      promo_discount_percent:
+        p.promo_original_price != null && p.promo_price != null && p.promo_original_price > 0
+          ? String(Math.round((1 - p.promo_price / p.promo_original_price) * 100))
+          : '',
+      promo_price: p.promo_price != null ? String(p.promo_price) : '',
+      promo_infinite: !hasDates,
+      promo_start_date: p.promo_start_date ? p.promo_start_date.slice(0, 10) : '',
+      promo_end_date: p.promo_end_date ? p.promo_end_date.slice(0, 10) : '',
     });
     setEditingId(p.id);
     setShowForm(true);
@@ -301,18 +326,40 @@ export function AdminPage() {
       return;
     }
 
+    const stockQty = Math.max(0, parseInt(form.stock_quantity) || 0);
+    const stockStatus = stockQty > 0 ? 'Disponivel' : 'Sem stock';
+
+    const promoPriceNum = form.promo_active ? parseFloat(form.promo_price) : NaN;
+    if (form.promo_active && (isNaN(promoPriceNum) || promoPriceNum < 0)) {
+      setSaveState('error');
+      setSaveMessage('Define um preço promocional válido.');
+      return;
+    }
+    if (form.promo_active && promoPriceNum >= priceNum) {
+      setSaveState('error');
+      setSaveMessage('O preço promocional tem de ser menor que o preço base.');
+      return;
+    }
+
     const payload = {
       name: form.name.trim(),
       price: priceNum,
       category: form.category,
       subcategory: form.subcategory || null,
       description: form.description.trim(),
-      stock_status: form.stock_status,
+      stock_status: stockStatus,
+      stock_quantity: stockQty,
       images: form.images,
       has_sizes: form.has_sizes,
       has_colors: form.has_colors,
       sizes: form.has_sizes ? form.sizes : [],
       colors: form.has_colors ? form.colors : [],
+      promo_active: form.promo_active,
+      promo_original_price: form.promo_active ? priceNum : null,
+      promo_price: form.promo_active ? promoPriceNum : null,
+      promo_start_date: form.promo_active && !form.promo_infinite && form.promo_start_date ? form.promo_start_date : null,
+      promo_end_date: form.promo_active && !form.promo_infinite && form.promo_end_date ? form.promo_end_date : null,
+      is_promo: form.promo_active,
     };
 
     try {
@@ -383,118 +430,175 @@ export function AdminPage() {
             <ArrowLeft size={14} /> Loja
           </button>
           <h1 className="font-display text-3xl font-semibold text-ink-900">Painel de administração</h1>
-          <p className="mt-1 text-sm text-ink-500">Gere os produtos da loja Dipa.</p>
+          <p className="mt-1 text-sm text-ink-500">Gere os produtos e encomendas da loja Dipa.</p>
         </div>
-        <button onClick={openNewForm} className="btn-primary">
-          <Plus size={18} /> Adicionar produto
-        </button>
-      </div>
-
-      {/* Search */}
-      <div className="reveal mt-8">
-        <div className="relative">
-          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-400" />
-          <input
-            type="text"
-            placeholder="Pesquisar produtos pelo nome…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="input-field pl-12"
-          />
-        </div>
-      </div>
-
-      {/* Product list */}
-      <div className="reveal mt-6">
-        {loadingProducts ? (
-          <div className="flex items-center justify-center rounded-3xl bg-white py-16 ring-1 ring-ink-100">
-            <Loader2 size={24} className="animate-spin text-ink-300" />
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-3 rounded-3xl bg-white py-16 text-center ring-1 ring-ink-100">
-            <ImageIcon size={28} className="text-ink-300" />
-            <p className="font-display text-lg font-semibold text-ink-900">
-              {search ? 'Nenhum produto encontrado' : 'Ainda sem produtos'}
-            </p>
-            <p className="text-sm text-ink-500">
-              {search ? 'Tenta outra pesquisa.' : 'Adiciona o primeiro produto da loja.'}
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-hidden rounded-3xl bg-white ring-1 ring-ink-100">
-            {/* Desktop table header */}
-            <div className="hidden grid-cols-[60px_1fr_120px_140px_120px_100px] gap-4 border-b border-ink-100 px-5 py-3 text-xs font-semibold uppercase tracking-wider text-ink-400 sm:grid">
-              <span>Imagem</span>
-              <span>Nome</span>
-              <span>Preço</span>
-              <span>Categoria</span>
-              <span>Estado</span>
-              <span className="text-right">Ações</span>
-            </div>
-            <ul className="divide-y divide-ink-100">
-              {filtered.map((p) => (
-                <li
-                  key={p.id}
-                  className="grid grid-cols-[56px_1fr_auto] items-center gap-4 px-5 py-4 sm:grid-cols-[60px_1fr_120px_140px_120px_100px]"
-                >
-                  {/* Image */}
-                  <div className="h-14 w-14 overflow-hidden rounded-xl bg-cream-100">
-                    {p.images?.[0] ? (
-                      <img src={p.images[0]} alt="" className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="grid h-full w-full place-items-center text-ink-300">
-                        <ImageIcon size={18} />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Name */}
-                  <div className="min-w-0">
-                    <p className="line-clamp-1 text-sm font-semibold text-ink-900">{p.name}</p>
-                    <div className="mt-0.5 flex items-center gap-2 sm:hidden">
-                      <span className="text-sm font-medium text-ink-700">{formatPrice(Number(p.price))}</span>
-                      <StockBadge status={p.stock_status} />
-                    </div>
-                  </div>
-
-                  {/* Price */}
-                  <span className="hidden text-sm font-semibold text-ink-900 sm:block">
-                    {formatPrice(Number(p.price))}
-                  </span>
-
-                  {/* Category */}
-                  <span className="hidden text-sm text-ink-600 sm:block">
-                    {CATEGORY_LABELS[p.category as keyof typeof CATEGORY_LABELS] ?? p.category}
-                  </span>
-
-                  {/* Stock */}
-                  <span className="hidden sm:block">
-                    <StockBadge status={p.stock_status} />
-                  </span>
-
-                  {/* Actions */}
-                  <div className="flex items-center justify-end gap-2">
-                    <button
-                      onClick={() => openEditForm(p)}
-                      className="grid h-9 w-9 place-items-center rounded-xl bg-cream-100 text-ink-600 transition-colors hover:bg-lilac-100 hover:text-lilac-700"
-                      title="Editar"
-                    >
-                      <Pencil size={16} />
-                    </button>
-                    <button
-                      onClick={() => setConfirmDelete(p.id)}
-                      className="grid h-9 w-9 place-items-center rounded-xl bg-cream-100 text-ink-600 transition-colors hover:bg-rose-100 hover:text-rose-600"
-                      title="Eliminar"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
+        {activeTab === 'products' && (
+          <button onClick={openNewForm} className="btn-primary">
+            <Plus size={18} /> Adicionar produto
+          </button>
         )}
       </div>
+
+      {/* Tabs */}
+      <div className="reveal mt-6 flex gap-2 border-b border-ink-100">
+        <TabButton active={activeTab === 'products'} onClick={() => setActiveTab('products')} icon={<ImageIcon size={16} />} label="Produtos" />
+        <TabButton active={activeTab === 'orders'} onClick={() => setActiveTab('orders')} icon={<Package size={16} />} label="Encomendas" />
+      </div>
+
+      {/* PRODUCTS TAB */}
+      {activeTab === 'products' && (
+        <>
+          {/* Search */}
+          <div className="reveal mt-6">
+            <div className="relative">
+              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-400" />
+              <input
+                type="text"
+                placeholder="Pesquisar produtos pelo nome…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="input-field pl-12"
+              />
+            </div>
+          </div>
+
+          {/* Product list */}
+          <div className="reveal mt-6">
+            {loadingProducts ? (
+              <div className="flex items-center justify-center rounded-3xl bg-white py-16 ring-1 ring-ink-100">
+                <Loader2 size={24} className="animate-spin text-ink-300" />
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-3 rounded-3xl bg-white py-16 text-center ring-1 ring-ink-100">
+                <ImageIcon size={28} className="text-ink-300" />
+                <p className="font-display text-lg font-semibold text-ink-900">
+                  {search ? 'Nenhum produto encontrado' : 'Ainda sem produtos'}
+                </p>
+                <p className="text-sm text-ink-500">
+                  {search ? 'Tenta outra pesquisa.' : 'Adiciona o primeiro produto da loja.'}
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-3xl bg-white ring-1 ring-ink-100">
+                <div className="hidden grid-cols-[60px_1fr_120px_140px_140px_80px_120px_100px] gap-4 border-b border-ink-100 px-5 py-3 text-xs font-semibold uppercase tracking-wider text-ink-400 sm:grid">
+                  <span>Imagem</span>
+                  <span>Nome</span>
+                  <span>Preço</span>
+                  <span>Categoria</span>
+                  <span>Subcategoria</span>
+                  <span>Stock</span>
+                  <span>Estado</span>
+                  <span className="text-right">Ações</span>
+                </div>
+                <ul className="divide-y divide-ink-100">
+                  {filtered.map((p) => (
+                    <li
+                      key={p.id}
+                      className="grid grid-cols-[56px_1fr_auto] items-center gap-4 px-5 py-4 sm:grid-cols-[60px_1fr_120px_140px_140px_80px_120px_100px]"
+                    >
+                      <div className="h-14 w-14 overflow-hidden rounded-xl bg-cream-100">
+                        {p.images?.[0] ? (
+                          <img src={p.images[0]} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="grid h-full w-full place-items-center text-ink-300">
+                            <ImageIcon size={18} />
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="line-clamp-1 text-sm font-semibold text-ink-900">{p.name}</p>
+                        <div className="mt-0.5 flex items-center gap-2 sm:hidden">
+                          <span className="text-sm font-medium text-ink-700">{formatPrice(Number(p.price))}</span>
+                          <StockBadge status={p.stock_status} />
+                        </div>
+                      </div>
+                      <span className="hidden text-sm font-semibold text-ink-900 sm:block">
+                        {formatPrice(Number(p.price))}
+                      </span>
+                      <span className="hidden text-sm text-ink-600 sm:block">
+                        {CATEGORY_LABELS[p.category as keyof typeof CATEGORY_LABELS] ?? p.category}
+                      </span>
+                      <span className="hidden text-sm text-ink-600 sm:block">
+                        {p.subcategory ?? '—'}
+                      </span>
+                      <span className="hidden text-center text-sm font-semibold text-ink-700 sm:block">
+                        {p.stock_quantity ?? 0}
+                      </span>
+                      <span className="hidden sm:block">
+                        <StockBadge status={p.stock_status} />
+                      </span>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => openEditForm(p)}
+                          className="grid h-9 w-9 place-items-center rounded-xl bg-cream-100 text-ink-600 transition-colors hover:bg-lilac-100 hover:text-lilac-700"
+                          title="Editar"
+                        >
+                          <Pencil size={16} />
+                        </button>
+                        <button
+                          onClick={() => setConfirmDelete(p.id)}
+                          className="grid h-9 w-9 place-items-center rounded-xl bg-cream-100 text-ink-600 transition-colors hover:bg-rose-100 hover:text-rose-600"
+                          title="Eliminar"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* ORDERS TAB */}
+      {activeTab === 'orders' && (
+        <>
+          {/* Order search */}
+          <div className="reveal mt-6">
+            <div className="relative">
+              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-400" />
+              <input
+                type="text"
+                placeholder="Pesquisar por nº encomenda, nome ou email…"
+                value={orderSearch}
+                onChange={(e) => setOrderSearch(e.target.value)}
+                className="input-field pl-12"
+              />
+            </div>
+          </div>
+
+          {/* Orders list */}
+          <div className="reveal mt-6">
+            {loadingOrders ? (
+              <div className="flex items-center justify-center rounded-3xl bg-white py-16 ring-1 ring-ink-100">
+                <Loader2 size={24} className="animate-spin text-ink-300" />
+              </div>
+            ) : filteredOrders.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-3 rounded-3xl bg-white py-16 text-center ring-1 ring-ink-100">
+                <Package size={28} className="text-ink-300" />
+                <p className="font-display text-lg font-semibold text-ink-900">
+                  {orderSearch ? 'Nenhuma encomenda encontrada' : 'Ainda sem encomendas'}
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {filteredOrders.map((order) => (
+                  <OrderRow
+                    key={order.id}
+                    order={order}
+                    expanded={expandedOrder === order.id}
+                    onToggle={() => setExpandedOrder(expandedOrder === order.id ? null : order.id)}
+                    onStatusChange={(status) => updateOrderStatus(order.id, status)}
+                    updating={orderUpdating === order.id}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
       {/* Form modal */}
       {showForm && (
@@ -603,10 +707,23 @@ export function AdminPage() {
                   <select
                     className="input-field mt-1.5 cursor-pointer"
                     value={form.category}
-                    onChange={(e) => setForm({ ...form, category: e.target.value })}
+                    onChange={(e) => setForm({ ...form, category: e.target.value, subcategory: '' })}
                   >
                     {CATEGORIES.map((c) => (
                       <option key={c.value} value={c.value}>{c.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-ink-500">Subcategoria</span>
+                  <select
+                    className="input-field mt-1.5 cursor-pointer"
+                    value={form.subcategory}
+                    onChange={(e) => setForm({ ...form, subcategory: e.target.value })}
+                  >
+                    <option value="">— Sem subcategoria —</option>
+                    {(SUBCATEGORIES[form.category] ?? []).map((s) => (
+                      <option key={s} value={s}>{s}</option>
                     ))}
                   </select>
                 </label>
@@ -623,19 +740,166 @@ export function AdminPage() {
                 />
               </label>
 
-              {/* Stock */}
+              {/* Stock quantity */}
               <label className="block">
-                <span className="text-xs font-semibold uppercase tracking-wider text-ink-500">Stock / Estado</span>
-                <select
-                  className="input-field mt-1.5 cursor-pointer"
-                  value={form.stock_status}
-                  onChange={(e) => setForm({ ...form, stock_status: e.target.value })}
-                >
-                  {STOCK_OPTIONS.map((s) => (
-                    <option key={s} value={s}>{s === 'Disponivel' ? 'Disponível' : 'Sem stock'}</option>
-                  ))}
-                </select>
+                <span className="text-xs font-semibold uppercase tracking-wider text-ink-500">Quantidade em stock</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  className="input-field mt-1.5"
+                  value={form.stock_quantity}
+                  onChange={(e) => {
+                    const qty = parseInt(e.target.value) || 0;
+                    setForm({ ...form, stock_quantity: e.target.value, stock_status: qty > 0 ? 'Disponivel' : 'Sem stock' });
+                  }}
+                  placeholder="0"
+                  required
+                />
+                <p className="mt-1.5 text-xs text-ink-400">
+                  {parseInt(form.stock_quantity) > 0
+                    ? `Disponível — ${form.stock_quantity} unidade${parseInt(form.stock_quantity) === 1 ? '' : 's'} em stock`
+                    : 'Sem stock — o produto aparece como "Esgotado" na loja'}
+                </p>
               </label>
+
+              {/* Promo section */}
+              <div className="rounded-2xl bg-cream-50 p-4 ring-1 ring-ink-100">
+                <ToggleCard
+                  icon={<Tag size={16} />}
+                  label="Ativar promoção"
+                  description="Define um preço promocional com desconto"
+                  checked={form.promo_active}
+                  onChange={(v) => setForm({ ...form, promo_active: v })}
+                />
+
+                {form.promo_active && (
+                  <div className="mt-4 flex flex-col gap-4">
+                    {/* Discount % and promo price */}
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <label className="block">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-ink-500">Percentagem de desconto (%)</span>
+                        <input
+                          type="number"
+                          step="1"
+                          min="0"
+                          max="100"
+                          className="input-field mt-1.5"
+                          value={form.promo_discount_percent}
+                          onChange={(e) => {
+                            const pct = parseFloat(e.target.value);
+                            const base = parseFloat(form.price);
+                            if (!isNaN(pct) && !isNaN(base) && base > 0) {
+                              const newPrice = (base - (base * pct) / 100).toFixed(2);
+                              setForm({ ...form, promo_discount_percent: e.target.value, promo_price: newPrice });
+                            } else {
+                              setForm({ ...form, promo_discount_percent: e.target.value });
+                            }
+                          }}
+                          placeholder="0"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-ink-500">Preço promocional (€)</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          className="input-field mt-1.5"
+                          value={form.promo_price}
+                          onChange={(e) => {
+                            const promo = parseFloat(e.target.value);
+                            const base = parseFloat(form.price);
+                            if (!isNaN(promo) && !isNaN(base) && base > 0 && promo < base) {
+                              const pct = Math.round(((base - promo) / base) * 100);
+                              setForm({ ...form, promo_price: e.target.value, promo_discount_percent: String(pct) });
+                            } else {
+                              setForm({ ...form, promo_price: e.target.value });
+                            }
+                          }}
+                          placeholder="0.00"
+                          required
+                        />
+                      </label>
+                    </div>
+
+                    {/* Quick discount buttons */}
+                    <div className="flex flex-wrap gap-2">
+                      {[10, 20, 30, 50].map((pct) => (
+                        <button
+                          key={pct}
+                          type="button"
+                          onClick={() => {
+                            const base = parseFloat(form.price);
+                            if (!isNaN(base) && base > 0) {
+                              const newPrice = (base - (base * pct) / 100).toFixed(2);
+                              setForm({ ...form, promo_discount_percent: String(pct), promo_price: newPrice });
+                            }
+                          }}
+                          className="rounded-full bg-white px-4 py-2 text-sm font-bold text-ink-700 ring-1 ring-ink-200 transition-all hover:bg-lilac-100 hover:text-lilac-700 hover:ring-lilac-300 active:scale-95"
+                        >
+                          -{pct}%
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Discount preview */}
+                    {form.promo_price &&
+                      parseFloat(form.price) > parseFloat(form.promo_price) && (
+                      <div className="flex items-center gap-2 rounded-xl bg-rose-100 px-4 py-2.5 text-sm font-bold text-rose-700">
+                        <Tag size={15} />
+                        Desconto de {Math.round((1 - parseFloat(form.promo_price) / parseFloat(form.price)) * 100)}% · Preço base {form.price}€
+                      </div>
+                    )}
+
+                    {/* Duration toggle */}
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setForm({ ...form, promo_infinite: true })}
+                        className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors ${
+                          form.promo_infinite ? 'bg-lilac-200 text-lilac-800' : 'bg-white text-ink-500 ring-1 ring-ink-200'
+                        }`}
+                      >
+                        <InfinityIcon size={16} /> Tempo infinito
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setForm({ ...form, promo_infinite: false })}
+                        className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors ${
+                          !form.promo_infinite ? 'bg-lilac-200 text-lilac-800' : 'bg-white text-ink-500 ring-1 ring-ink-200'
+                        }`}
+                      >
+                        <Calendar size={16} /> Datas definidas
+                      </button>
+                    </div>
+
+                    {/* Date pickers */}
+                    {!form.promo_infinite && (
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <label className="block">
+                          <span className="text-xs font-semibold uppercase tracking-wider text-ink-500">Início</span>
+                          <input
+                            type="date"
+                            className="input-field mt-1.5"
+                            value={form.promo_start_date}
+                            onChange={(e) => setForm({ ...form, promo_start_date: e.target.value })}
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="text-xs font-semibold uppercase tracking-wider text-ink-500">Fim</span>
+                          <input
+                            type="date"
+                            className="input-field mt-1.5"
+                            value={form.promo_end_date}
+                            onChange={(e) => setForm({ ...form, promo_end_date: e.target.value })}
+                          />
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* Variation toggles */}
               <div className="grid gap-4 sm:grid-cols-2">
@@ -880,6 +1144,115 @@ function StockBadge({ status }: { status: string }) {
       <span className={`h-1.5 w-1.5 rounded-full ${inStock ? 'bg-emerald-500' : 'bg-rose-500'}`} />
       {inStock ? 'Disponível' : 'Sem stock'}
     </span>
+  );
+}
+
+function TabButton({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${
+        active ? 'border-lilac-500 text-ink-900' : 'border-transparent text-ink-400 hover:text-ink-700'
+      }`}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
+const STATUS_STYLES: Record<string, string> = {
+  pending: 'bg-amber-50 text-amber-700',
+  paid: 'bg-sky-50 text-sky-700',
+  preparing: 'bg-lilac-50 text-lilac-700',
+  shipped: 'bg-indigo-50 text-indigo-700',
+  delivered: 'bg-emerald-50 text-emerald-700',
+  cancelled: 'bg-rose-50 text-rose-700',
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  pending: 'Pendente',
+  paid: 'Pago',
+  preparing: 'Em preparação',
+  shipped: 'Enviado',
+  delivered: 'Entregue',
+  cancelled: 'Cancelada',
+};
+
+function OrderRow({
+  order,
+  expanded,
+  onToggle,
+  onStatusChange,
+  updating,
+}: {
+  order: AdminOrder;
+  expanded: boolean;
+  onToggle: () => void;
+  onStatusChange: (status: string) => void;
+  updating: boolean;
+}) {
+  return (
+    <div className="overflow-hidden rounded-2xl bg-white ring-1 ring-ink-100">
+      <button
+        onClick={onToggle}
+        className="flex w-full items-center gap-4 p-4 text-left"
+      >
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-display text-sm font-bold text-ink-900">
+              #{order.order_number ?? '—'}
+            </span>
+            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_STYLES[order.status] ?? 'bg-ink-50 text-ink-600'}`}>
+              {STATUS_LABELS[order.status] ?? order.status}
+            </span>
+          </div>
+          <p className="mt-1 line-clamp-1 text-sm text-ink-600">{order.customer_name} · {order.customer_email}</p>
+          <p className="mt-0.5 text-xs text-ink-400">
+            {new Date(order.created_at).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' })}
+          </p>
+        </div>
+        <span className="text-sm font-bold text-ink-900">{formatPrice(Number(order.total))}</span>
+        <ChevronDown size={18} className={`shrink-0 text-ink-400 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+      </button>
+
+      {expanded && (
+        <div className="border-t border-ink-100 p-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-ink-400">Cliente</p>
+              <dl className="mt-2 space-y-1 text-sm text-ink-700">
+                <div><dt className="inline font-medium text-ink-500">Nome: </dt><dd className="inline">{order.customer_name}</dd></div>
+                <div><dt className="inline font-medium text-ink-500">Email: </dt><dd className="inline">{order.customer_email}</dd></div>
+                <div><dt className="inline font-medium text-ink-500">Telemóvel: </dt><dd className="inline">{order.customer_phone ?? '—'}</dd></div>
+                <div><dt className="inline font-medium text-ink-500">Morada: </dt><dd className="inline">{order.customer_address ?? '—'}, {order.customer_city ?? '—'} {order.customer_postal_code ?? ''}</dd></div>
+                <div><dt className="inline font-medium text-ink-500">NIF: </dt><dd className="inline">{order.nif ?? '—'}</dd></div>
+              </dl>
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-ink-400">Estado da encomenda</p>
+              <div className="mt-2 flex items-center gap-2">
+                <select
+                  value={order.status}
+                  onChange={(e) => onStatusChange(e.target.value)}
+                  disabled={updating}
+                  className="input-field flex-1 cursor-pointer disabled:opacity-50"
+                >
+                  {ORDER_STATUSES.map((s) => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
+                </select>
+                {updating && <Loader2 size={16} className="animate-spin text-ink-400" />}
+              </div>
+              <dl className="mt-3 space-y-1 text-sm text-ink-700">
+                <div><dt className="inline font-medium text-ink-500">Pagamento: </dt><dd className="inline">{order.payment_method ?? '—'}</dd></div>
+                <div><dt className="inline font-medium text-ink-500">Envio: </dt><dd className="inline">{order.shipping_method ?? '—'}</dd></div>
+              </dl>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

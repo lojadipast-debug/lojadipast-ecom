@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { SlidersHorizontal, X, ChevronDown, Check } from 'lucide-react';
 import { ProductCard } from '@/components/ProductCard';
 import { useRouter } from '@/store/router';
-import { CATEGORY_LABELS, AGE_LABELS, BRANDS } from '@/data/catalog';
+import { CATEGORY_LABELS, AGE_LABELS, BRANDS, isPromoActiveNow, isNewWithin10Days } from '@/data/catalog';
 import type { Category, AgeGroup, BrandName } from '@/data/catalog';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
 import { useProducts } from '@/store/products';
@@ -76,13 +76,13 @@ export function CatalogPage({ category }: { category?: string }) {
     const set = new Set<string>();
     products.forEach((p) => p.sizes.forEach((s) => set.add(s)));
     return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-  }, []);
+  }, [products]);
 
   const filtered = useMemo(() => {
     let list = [...products];
 
-    if (special && category === 'novidades') list = list.filter((p) => p.isNew);
-    if (special && category === 'promocoes') list = list.filter((p) => p.isPromo);
+    if (special && category === 'novidades') list = list.filter((p) => p.isNew || isNewWithin10Days(p));
+    if (special && category === 'promocoes') list = list.filter((p) => p.isPromo || isPromoActiveNow(p));
     if (!special && selectedCats.size > 0)
       list = list.filter((p) => selectedCats.has(p.category));
     if (selectedAges.size > 0) list = list.filter((p) => selectedAges.has(p.ageGroup));
@@ -91,8 +91,8 @@ export function CatalogPage({ category }: { category?: string }) {
       list = list.filter((p) => p.colors.some((c) => selectedColors.has(c.name)));
     if (selectedSizes.size > 0)
       list = list.filter((p) => p.sizes.some((s) => selectedSizes.has(s)));
-    if (onlyPromo) list = list.filter((p) => p.isPromo);
-    if (onlyNew) list = list.filter((p) => p.isNew);
+    if (onlyPromo) list = list.filter((p) => p.isPromo || isPromoActiveNow(p));
+    if (onlyNew) list = list.filter((p) => p.isNew || isNewWithin10Days(p));
 
     switch (sort) {
       case 'maisvendidos':
@@ -105,7 +105,16 @@ export function CatalogPage({ category }: { category?: string }) {
         list.sort((a, b) => b.price - a.price);
         break;
       default:
-        list.sort((a, b) => Number(b.isNew ?? 0) - Number(a.isNew ?? 0));
+        list.sort((a, b) => {
+          const aNew = Number(a.isNew || isNewWithin10Days(a));
+          const bNew = Number(b.isNew || isNewWithin10Days(b));
+          if (aNew !== bNew) return bNew - aNew;
+          return new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime();
+        });
+    }
+
+    if (special && (category === 'novidades' || category === 'promocoes')) {
+      list = list.slice(0, 20);
     }
     return list;
   }, [

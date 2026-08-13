@@ -26,7 +26,7 @@ export function HomePage() {
       <ProductSection
         eyebrow="Seleção Dipa"
         title="Produtos em destaque"
-        filter="isFeatured"
+        filter="autoFeatured"
         cta="Ver todos"
         ctaTo="/catalogo"
       />

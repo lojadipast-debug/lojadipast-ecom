@@ -1,4 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements } from '@stripe/react-stripe-js';
 import {
   Check,
   Lock,
@@ -10,10 +13,16 @@ import {
   Smartphone,
   Wallet,
   Shield,
+  Home,
+  Building2,
+  MapPin,
 } from 'lucide-react';
 import { useCart } from '@/store/cart';
 import { useRouter } from '@/store/router';
+import { useAccount } from '@/store/account';
 import { formatPrice, effectivePrice } from '@/data/catalog';
+import type { AccountAddress } from '@/store/account';
+import { StripePaymentForm } from '@/components/StripePaymentForm';
 
 type Step = 'info' | 'pago';
 type PaymentMethod = 'card' | 'mbway' | 'paypal';
@@ -23,8 +32,13 @@ interface ShippingInfo {
   email: string;
   phone: string;
   address: string;
+  houseNumber: string;
+  buildingType: 'casa' | 'apartamento';
+  floor: string;
+  apartmentUnit: string;
   city: string;
   postal: string;
+  country: string;
   nif: string;
 }
 
@@ -33,27 +47,62 @@ const EMPTY_INFO: ShippingInfo = {
   email: '',
   phone: '',
   address: '',
+  houseNumber: '',
+  buildingType: 'casa',
+  floor: '',
+  apartmentUnit: '',
   city: '',
   postal: '',
+  country: 'Portugal',
   nif: '',
 };
+
+const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string;
+const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : null;
+
+function addressToInfo(addr: AccountAddress, fallbackName: string, fallbackEmail: string): ShippingInfo {
+  return {
+    name: addr.name || fallbackName,
+    email: fallbackEmail,
+    phone: addr.phone,
+    address: addr.street,
+    houseNumber: addr.houseNumber,
+    buildingType: addr.buildingType,
+    floor: addr.floor ?? '',
+    apartmentUnit: addr.apartmentUnit ?? '',
+    city: addr.city,
+    postal: addr.postal,
+    country: addr.country,
+    nif: '',
+  };
+}
 
 export function CheckoutPage() {
   const { items, subtotal, clearCart } = useCart();
   const { navigate } = useRouter();
+  const { user, addresses } = useAccount();
   const [step, setStep] = useState<Step>('info');
   const [info, setInfo] = useState<ShippingInfo>(EMPTY_INFO);
   const [shippingMethod, setShippingMethod] = useState<'standard' | 'express'>('standard');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [showAddressPicker, setShowAddressPicker] = useState(false);
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardExpiry, setCardExpiry] = useState('');
-  const [cardCvc, setCardCvc] = useState('');
-  const [cardName, setCardName] = useState('');
-  const [billingSame, setBillingSame] = useState(true);
   const [mbwayPhone, setMbwayPhone] = useState('');
+
+  // PaymentIntent state for Stripe Elements
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [orderId, setOrderId] = useState<string | null>(null);
+
+  // Auto-fill from first saved address when user is logged in
+  useEffect(() => {
+    if (user && addresses.length > 0) {
+      setInfo(addressToInfo(addresses[0], user.name, user.email));
+    } else if (user) {
+      setInfo((prev) => ({ ...prev, name: user.name, email: user.email, phone: user.phone ?? '' }));
+    }
+  }, [user, addresses]);
 
   const standardShipping = subtotal >= 50 ? 0 : 4.9;
   const shipping = shippingMethod === 'express' ? 9.9 : standardShipping;
@@ -74,9 +123,15 @@ export function CheckoutPage() {
     setInfo((prev) => ({ ...prev, [key]: e.target.value }));
   };
 
+  const selectAddress = (addr: AccountAddress) => {
+    setInfo(addressToInfo(addr, user?.name ?? '', user?.email ?? ''));
+    setShowAddressPicker(false);
+  };
+
   const infoValid =
     info.name.trim() && info.email.trim() && info.phone.trim() &&
-    info.address.trim() && info.city.trim() && info.postal.trim();
+    info.address.trim() && info.houseNumber.trim() && info.city.trim() && info.postal.trim() &&
+    (info.buildingType === 'casa' || (info.floor.trim() && info.apartmentUnit.trim()));
 
   const goPayment = () => {
     if (!infoValid) {
@@ -87,39 +142,81 @@ export function CheckoutPage() {
     setStep('pago');
   };
 
-  const formatCardNumber = (val: string) => {
-    const digits = val.replace(/\D/g, '').slice(0, 16);
-    return digits.replace(/(.{4})/g, '$1 ').trim();
-  };
-
-  const formatExpiry = (val: string) => {
-    const digits = val.replace(/\D/g, '').slice(0, 4);
-    if (digits.length >= 3) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
-    return digits;
-  };
-
-  const validateCard = (): string | null => {
-    if (cardNumber.replace(/\s/g, '').length < 13) return 'Introduz um número de cartão válido.';
-    if (cardExpiry.length < 5) return 'Introduz a data de expiração (MM/AA).';
-    if (cardCvc.length < 3) return 'Introduz o código CVC/CVV.';
-    if (!cardName.trim()) return 'Introduz o nome no cartão.';
-    return null;
-  };
-
   const validateMbway = (): string | null => {
     const digits = mbwayPhone.replace(/\D/g, '');
     if (digits.length < 9) return 'Introduz um número de telemóvel válido (9 dígitos).';
     return null;
   };
 
-  const redirectToCheckout = async (e: React.FormEvent) => {
+  const buildRequestBody = () => ({
+    items: items.map((item) => ({
+      productId: item.productId,
+      name: item.product.name,
+      price: effectivePrice(item.product),
+      quantity: item.quantity,
+      size: item.size,
+      color: item.color,
+      image: item.product.images[0] ?? '',
+    })),
+    shippingMethod,
+    shippingCost: shipping,
+    subtotal,
+    paymentMethod,
+    mbwayPhone: paymentMethod === 'mbway' ? mbwayPhone : undefined,
+    nif: info.nif.trim() || undefined,
+    customer: {
+      name: info.name.trim(),
+      email: info.email.trim(),
+      phone: info.phone.trim(),
+      address: `${info.address.trim()}, ${info.houseNumber.trim()}${info.buildingType === 'apartamento' ? `, Andar ${info.floor.trim()}, ${info.apartmentUnit.trim()}` : ''}`,
+      city: info.city.trim(),
+      postal: info.postal.trim(),
+      country: info.country.trim(),
+    },
+  });
+
+  const createPaymentIntent = async () => {
+    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-payment-intent`;
+    const res = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify(buildRequestBody()),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.clientSecret) {
+      throw new Error(data.error ?? 'Não foi possível iniciar o pagamento.');
+    }
+    setClientSecret(data.clientSecret);
+    setOrderId(data.orderId);
+    return data.orderId as string;
+  };
+
+  const redirectToHostedCheckout = async () => {
+    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout-session`;
+    const res = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify(buildRequestBody()),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.url) {
+      throw new Error(data.error ?? 'Não foi possível iniciar o pagamento.');
+    }
+    clearCart();
+    window.location.href = data.url;
+  };
+
+  const handlePay = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (paymentMethod === 'card') {
-      const cardErr = validateCard();
-      if (cardErr) { setError(cardErr); return; }
-    } else if (paymentMethod === 'mbway') {
+    if (paymentMethod === 'mbway') {
       const mbErr = validateMbway();
       if (mbErr) { setError(mbErr); return; }
     }
@@ -127,53 +224,32 @@ export function CheckoutPage() {
     setSubmitting(true);
 
     try {
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout-session`;
-      const res = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({
-          items: items.map((item) => ({
-            productId: item.productId,
-            name: item.product.name,
-            price: effectivePrice(item.product),
-            quantity: item.quantity,
-            size: item.size,
-            color: item.color,
-            image: item.product.images[0] ?? '',
-          })),
-          shippingMethod,
-          shippingCost: shipping,
-          subtotal,
-          paymentMethod,
-          mbwayPhone: paymentMethod === 'mbway' ? mbwayPhone : undefined,
-          nif: info.nif.trim() || undefined,
-          customer: {
-            name: info.name.trim(),
-            email: info.email.trim(),
-            phone: info.phone.trim(),
-            address: info.address.trim(),
-            city: info.city.trim(),
-            postal: info.postal.trim(),
-          },
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok || !data.url) {
-        throw new Error(data.error ?? 'Não foi possível iniciar o pagamento.');
+      if (paymentMethod === 'card') {
+        // PaymentIntent flow — Stripe Elements handles card details on-site
+        await createPaymentIntent();
+        // The StripePaymentForm component will handle confirmation
+      } else {
+        // MB WAY / PayPal — redirect to Stripe hosted checkout
+        await redirectToHostedCheckout();
       }
-
-      clearCart();
-      window.location.href = data.url;
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Algo correu mal ao processar o pagamento.';
       setError(msg);
+    } finally {
       setSubmitting(false);
     }
+  };
+
+  const appearance = {
+    theme: 'stripe' as const,
+    variables: {
+      colorPrimary: '#7c5cBf',
+      colorBackground: '#ffffff',
+      colorText: '#1c1917',
+      colorDanger: '#e11d48',
+      borderRadius: '12px',
+      spacingUnit: '4px',
+    },
   };
 
   return (
@@ -202,19 +278,64 @@ export function CheckoutPage() {
         })}
       </div>
 
-      <form onSubmit={redirectToCheckout} className="mt-10 grid gap-8 lg:grid-cols-[1fr_380px]">
+      <form onSubmit={handlePay} className="mt-10 grid gap-8 lg:grid-cols-[1fr_380px]">
         {/* form */}
         <div className="flex flex-col gap-6">
           {step === 'info' && (
             <section className="rounded-3xl bg-white p-6 ring-1 ring-ink-100">
-              <h2 className="font-display text-lg font-semibold text-ink-900">Contacto e envio</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="font-display text-lg font-semibold text-ink-900">Contacto e envio</h2>
+                {user && addresses.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAddressPicker(true)}
+                    className="flex items-center gap-2 rounded-xl border border-purple-200 bg-purple-50 px-4 py-2.5 text-sm font-semibold text-purple-700 transition-all hover:bg-purple-100"
+                  >
+                    <MapPin size={16} /> Selecionar das minhas moradas guardadas
+                  </button>
+                )}
+              </div>
+
+              {/* Building type selector */}
+              <div className="mt-4">
+                <span className="text-xs font-semibold uppercase tracking-wider text-ink-500">Tipo de habitação</span>
+                <div className="mt-1.5 grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setInfo((p) => ({ ...p, buildingType: 'casa' }))}
+                    className={`flex items-center justify-center gap-2.5 rounded-2xl border-2 px-4 py-4 text-base font-semibold transition-all ${
+                      info.buildingType === 'casa' ? 'border-lilac-500 bg-lilac-50 text-lilac-700' : 'border-ink-200 text-ink-600 hover:border-lilac-300'
+                    }`}
+                  >
+                    <Home size={22} /> Casa
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInfo((p) => ({ ...p, buildingType: 'apartamento' }))}
+                    className={`flex items-center justify-center gap-2.5 rounded-2xl border-2 px-4 py-4 text-base font-semibold transition-all ${
+                      info.buildingType === 'apartamento' ? 'border-lilac-500 bg-lilac-50 text-lilac-700' : 'border-ink-200 text-ink-600 hover:border-lilac-300'
+                    }`}
+                  >
+                    <Building2 size={22} /> Apartamento
+                  </button>
+                </div>
+              </div>
+
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <Field label="Nome" placeholder="Maria Silva" required value={info.name} onChange={setField('name')} />
                 <Field label="Email" type="email" placeholder="maria@email.com" required value={info.email} onChange={setField('email')} />
                 <Field label="Telefone" placeholder="+351 912 345 678" required value={info.phone} onChange={setField('phone')} />
-                <Field label="Morada" placeholder="Rua das Flores, 12" required value={info.address} onChange={setField('address')} className="sm:col-span-2" />
-                <Field label="Cidade" placeholder="Lisboa" required value={info.city} onChange={setField('city')} />
-                <Field label="Código postal" placeholder="1200-190" required value={info.postal} onChange={setField('postal')} />
+                <Field label="Morada" placeholder="Travessa Infante D. Henrique" required value={info.address} onChange={setField('address')} className="sm:col-span-2" />
+                <Field label="N.º da porta" placeholder="123" required value={info.houseNumber} onChange={setField('houseNumber')} />
+                {info.buildingType === 'apartamento' && (
+                  <>
+                    <Field label="Andar" placeholder="3.º" required value={info.floor} onChange={setField('floor')} />
+                    <Field label="Apartamento / Fração / Porta" placeholder="Esq, Bloco B, Ap 32" required value={info.apartmentUnit} onChange={setField('apartmentUnit')} />
+                  </>
+                )}
+                <Field label="Código postal" placeholder="4795-249" required value={info.postal} onChange={setField('postal')} />
+                <Field label="Localidade" placeholder="Porto" required value={info.city} onChange={setField('city')} />
+                <Field label="País" placeholder="Portugal" value={info.country} onChange={setField('country')} />
                 <Field label="NIF (opcional)" placeholder="123456789" value={info.nif} onChange={setField('nif')} />
               </div>
               <div className="mt-5">
@@ -269,10 +390,10 @@ export function CheckoutPage() {
 
               {/* Payment method accordion */}
               <div className="mt-5 flex flex-col gap-3">
-                {/* Cartão de Crédito */}
+                {/* Cartão de Crédito — Stripe Elements on-site */}
                 <PaymentOption
                   active={paymentMethod === 'card'}
-                  onClick={() => setPaymentMethod('card')}
+                  onClick={() => { setPaymentMethod('card'); setClientSecret(null); setOrderId(null); }}
                   icon={<CreditCard size={20} />}
                   title="Cartão de Crédito / Débito"
                   badges={
@@ -283,68 +404,21 @@ export function CheckoutPage() {
                     </div>
                   }
                 >
-                  <div className="grid gap-4">
-                    <label className="block">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-ink-500">Número do cartão</span>
-                      <input
-                        className="input-field mt-1.5"
-                        value={cardNumber}
-                        onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
-                        placeholder="1234 5678 9012 3456"
-                        inputMode="numeric"
-                        autoComplete="cc-number"
-                      />
-                    </label>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <label className="block">
-                        <span className="text-xs font-semibold uppercase tracking-wider text-ink-500">Data de expiração (MM/AA)</span>
-                        <input
-                          className="input-field mt-1.5"
-                          value={cardExpiry}
-                          onChange={(e) => setCardExpiry(formatExpiry(e.target.value))}
-                          placeholder="MM/AA"
-                          inputMode="numeric"
-                          autoComplete="cc-exp"
-                        />
-                      </label>
-                      <label className="block">
-                        <span className="text-xs font-semibold uppercase tracking-wider text-ink-500">CVC / CVV</span>
-                        <input
-                          className="input-field mt-1.5"
-                          value={cardCvc}
-                          onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                          placeholder="123"
-                          inputMode="numeric"
-                          autoComplete="cc-csc"
-                        />
-                      </label>
-                    </div>
-                    <label className="block">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-ink-500">Nome no cartão</span>
-                      <input
-                        className="input-field mt-1.5"
-                        value={cardName}
-                        onChange={(e) => setCardName(e.target.value)}
-                        placeholder="MARIA SILVA"
-                        autoComplete="cc-name"
-                      />
-                    </label>
-                    <label className="flex cursor-pointer items-center gap-3 rounded-2xl bg-cream-50 p-3.5 ring-1 ring-ink-100">
-                      <input
-                        type="checkbox"
-                        checked={billingSame}
-                        onChange={(e) => setBillingSame(e.target.checked)}
-                        className="h-5 w-5 rounded accent-lilac-500"
-                      />
-                      <span className="text-sm text-ink-700">Utilizar endereço de envio como endereço de faturação</span>
-                    </label>
-                  </div>
+                  {clientSecret && orderId ? (
+                    <Elements stripe={stripePromise} options={{ clientSecret, appearance }}>
+                      <StripePaymentForm orderId={orderId} total={total} />
+                    </Elements>
+                  ) : (
+                    <p className="text-sm text-ink-500">
+                      Clica em "Pagar" para carregar o formulário de pagamento seguro da Stripe.
+                    </p>
+                  )}
                 </PaymentOption>
 
                 {/* MB WAY / Multibanco */}
                 <PaymentOption
                   active={paymentMethod === 'mbway'}
-                  onClick={() => setPaymentMethod('mbway')}
+                  onClick={() => { setPaymentMethod('mbway'); setClientSecret(null); setOrderId(null); }}
                   icon={<Smartphone size={20} />}
                   title="MB WAY / Multibanco"
                   badges={
@@ -379,7 +453,7 @@ export function CheckoutPage() {
                 {/* PayPal */}
                 <PaymentOption
                   active={paymentMethod === 'paypal'}
-                  onClick={() => setPaymentMethod('paypal')}
+                  onClick={() => { setPaymentMethod('paypal'); setClientSecret(null); setOrderId(null); }}
                   icon={<Wallet size={20} />}
                   title="PayPal"
                   badges={
@@ -403,24 +477,37 @@ export function CheckoutPage() {
                 </p>
               )}
 
-              <div className="mt-6 flex flex-col gap-3">
-                <button type="submit" disabled={submitting} className="btn-primary w-full disabled:opacity-60">
-                  {submitting ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Loader2 size={16} className="animate-spin" /> A preparar pagamento…
-                    </span>
-                  ) : (
-                    `Pagar ${formatPrice(total)}`
-                  )}
-                </button>
+              {/* Show the "Pay" button only for non-card methods or when card form isn't loaded yet */}
+              {!(paymentMethod === 'card' && clientSecret && orderId) && (
+                <div className="mt-6 flex flex-col gap-3">
+                  <button type="submit" disabled={submitting} className="btn-primary w-full disabled:opacity-60">
+                    {submitting ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader2 size={16} className="animate-spin" /> A preparar pagamento…
+                      </span>
+                    ) : (
+                      `Pagar ${formatPrice(total)}`
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStep('info')}
+                    className="flex items-center justify-center gap-1 text-sm text-ink-500 hover:text-ink-800"
+                  >
+                    <ChevronLeft size={15} /> Voltar
+                  </button>
+                </div>
+              )}
+
+              {paymentMethod === 'card' && clientSecret && orderId && (
                 <button
                   type="button"
                   onClick={() => setStep('info')}
-                  className="flex items-center justify-center gap-1 text-sm text-ink-500 hover:text-ink-800"
+                  className="mt-4 flex items-center justify-center gap-1 text-sm text-ink-500 hover:text-ink-800"
                 >
                   <ChevronLeft size={15} /> Voltar
                 </button>
-              </div>
+              )}
             </section>
           )}
         </div>
@@ -467,6 +554,63 @@ export function CheckoutPage() {
           </div>
         </aside>
       </form>
+
+      {/* Address picker modal */}
+      {showAddressPicker && createPortal(
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="As tuas moradas"
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+          onClick={() => setShowAddressPicker(false)}
+        >
+          <div
+            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl sm:p-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="font-display text-xl font-semibold text-ink-900">As tuas moradas</h2>
+              <button
+                onClick={() => setShowAddressPicker(false)}
+                className="grid h-9 w-9 place-items-center rounded-full text-ink-400 hover:bg-cream-100 hover:text-ink-700"
+              >
+                <ChevronLeft size={20} />
+              </button>
+            </div>
+            <div className="mt-4 flex flex-col gap-3">
+              {addresses.map((addr) => (
+                <button
+                  key={addr.id}
+                  type="button"
+                  onClick={() => selectAddress(addr)}
+                  className="rounded-2xl bg-cream-50 p-4 text-left ring-1 ring-ink-100 transition-all hover:ring-lilac-300"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="chip bg-lilac-100 ring-lilac-200 text-lilac-700">{addr.label}</span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-cream-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ink-600">
+                      {addr.buildingType === 'apartamento' ? <Building2 size={11} /> : <Home size={11} />}
+                      {addr.buildingType === 'apartamento' ? 'Apartamento' : 'Casa'}
+                    </span>
+                  </div>
+                  <p className="mt-2 font-semibold text-ink-900">{addr.name}</p>
+                  <p className="text-sm text-ink-600">{addr.street}, {addr.houseNumber}</p>
+                  {addr.buildingType === 'apartamento' && (addr.floor || addr.apartmentUnit) && (
+                    <p className="text-sm text-ink-600">
+                      {addr.floor && `Andar ${addr.floor}`}
+                      {addr.floor && addr.apartmentUnit && ' · '}
+                      {addr.apartmentUnit}
+                    </p>
+                  )}
+                  <p className="text-sm text-ink-600">{addr.postal} {addr.city}</p>
+                  <p className="text-sm text-ink-600">{addr.country}</p>
+                  <p className="mt-1 text-sm text-ink-500">{addr.phone}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )}
     </div>
   );
 }
@@ -585,7 +729,7 @@ function PaymentOption({
 
 function CardBadge({ label, bg }: { label: string; bg: string }) {
   return (
-    <span className={`rounded-md ${bg} px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white`}>
+    <span className={'rounded-md ' + bg + ' px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white'}>
       {label}
     </span>
   );

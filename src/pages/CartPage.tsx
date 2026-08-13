@@ -105,7 +105,8 @@ export function CartPage() {
                     </span>
                     <button
                       onClick={() => updateQuantity(item.key, item.quantity + 1)}
-                      className="grid h-8 w-8 place-items-center rounded-full text-ink-600 hover:bg-white"
+                      disabled={item.quantity >= (item.product.stockQuantity ?? 0)}
+                      className="grid h-8 w-8 place-items-center rounded-full text-ink-600 hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
                       aria-label="Aumentar"
                     >
                       <Plus size={14} />

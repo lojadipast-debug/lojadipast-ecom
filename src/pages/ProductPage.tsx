@@ -13,7 +13,6 @@ import { useCart } from '@/store/cart';
 import { formatPrice, CATEGORY_LABELS, effectivePrice, effectiveOldPrice, isOutOfStock, isPromoActiveNow } from '@/data/catalog';
 import { useProducts } from '@/store/products';
 import { ProductCard } from '@/components/ProductCard';
-import { StarRating } from '@/components/StarRating';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
 
 export function ProductPage({ id }: { id: string }) {
@@ -30,6 +29,7 @@ export function ProductPage({ id }: { id: string }) {
   const [zoom, setZoom] = useState(false);
   const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
   const [added, setAdded] = useState(false);
+  const [addError, setAddError] = useState('');
 
   const hasSizes = product?.sizes && product.sizes.length > 0;
   const hasColors = product?.colors && product.colors.length > 0;
@@ -68,14 +68,21 @@ export function ProductPage({ id }: { id: string }) {
 
   const handleAdd = () => {
     if (outOfStock) return;
+    const resolvedSize = hasSizes ? (size || product.sizes[0]) : 'Único';
+    const resolvedColor = hasColors ? (color || product.colors[0].name) : 'Padrão';
     if (hasSizes && !size) setSize(product.sizes[0]);
     if (hasColors && !color) setColor(product.colors[0].name);
-    addToCart({
+    const result = addToCart({
       productId: product.id,
-      size: hasSizes ? (size || product.sizes[0]) : 'Único',
-      color: hasColors ? (color || product.colors[0].name) : 'Padrão',
+      size: resolvedSize,
+      color: resolvedColor,
       quantity: qty,
     });
+    if (!result.ok) {
+      setAddError(result.message ?? 'Não foi possível adicionar.');
+      setTimeout(() => setAddError(''), 3000);
+      return;
+    }
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
@@ -116,7 +123,7 @@ export function ProductPage({ id }: { id: string }) {
               <ZoomIn size={12} /> Passa o rato para ampliar
             </span>
             {(product.isPromo || promoNow) && discount > 0 && (
-              <span className="absolute left-3 top-3 rounded-full bg-rose-400 px-3 py-1 text-xs font-bold text-white shadow-soft">
+              <span className="absolute left-3 top-3 grid min-h-14 min-w-14 place-items-center rounded-full bg-rose-500 px-3 py-2 text-lg font-extrabold text-white shadow-soft-lg ring-2 ring-white/60">
                 -{discount}%
               </span>
             )}
@@ -161,10 +168,6 @@ export function ProductPage({ id }: { id: string }) {
             {product.name}
           </h1>
 
-          <div className="mt-3 flex items-center gap-3">
-            <StarRating rating={product.rating} count={product.reviewsCount} size={16} />
-          </div>
-
           <div className="mt-5 flex items-end gap-3">
             <span className="font-display text-3xl font-semibold text-ink-900">
               {formatPrice(currentPrice)}
@@ -177,7 +180,7 @@ export function ProductPage({ id }: { id: string }) {
           </div>
 
           {/* stock indicator */}
-          <div className="mt-3">
+          <div className="mt-4">
             {outOfStock ? (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-700">
                 Esgotado — avisa-nos quando disponível
@@ -266,7 +269,8 @@ export function ProductPage({ id }: { id: string }) {
               <span className="w-8 text-center font-semibold text-ink-900">{qty}</span>
               <button
                 onClick={() => setQty((q) => Math.min(product.stockQuantity ?? 0, q + 1))}
-                className="grid h-11 w-11 place-items-center rounded-full text-ink-600 hover:bg-cream-100"
+                disabled={qty >= (product.stockQuantity ?? 0)}
+                className="grid h-11 w-11 place-items-center rounded-full text-ink-600 hover:bg-cream-100 disabled:cursor-not-allowed disabled:opacity-40"
                 aria-label="Aumentar quantidade"
               >
                 <Plus size={16} />
@@ -287,6 +291,10 @@ export function ProductPage({ id }: { id: string }) {
               )}
             </button>
 
+            {addError && (
+              <p className="mt-2 text-sm font-semibold text-rose-600">{addError}</p>
+            )}
+
             <button
               onClick={() => toggleFavorite(product.id)}
               aria-label={fav ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
@@ -300,11 +308,6 @@ export function ProductPage({ id }: { id: string }) {
             </button>
           </div>
 
-          {/* description */}
-          <div className="mt-8">
-            <p className="text-xs font-semibold uppercase tracking-wider text-ink-500">Descrição</p>
-            <p className="mt-3 text-sm leading-relaxed text-ink-600">{product.description}</p>
-          </div>
         </div>
       </div>
 

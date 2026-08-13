@@ -41,6 +41,22 @@ export interface Product {
   promoPrice?: number;
   promoStartDate?: string | null;
   promoEndDate?: string | null;
+  createdAt?: string | null;
+}
+
+const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
+
+export function isNewWithin10Days(product: Product): boolean {
+  if (!product.createdAt) return product.isNew ?? false;
+  return Date.now() - new Date(product.createdAt).getTime() <= TEN_DAYS_MS;
+}
+
+export function promoDiscountPercent(product: Product): number {
+  if (!isPromoActiveNow(product)) return 0;
+  const oldP = product.promoOriginalPrice ?? product.oldPrice ?? product.price;
+  const newP = product.promoPrice ?? product.price;
+  if (oldP <= 0 || newP >= oldP) return 0;
+  return Math.round(((oldP - newP) / oldP) * 100);
 }
 
 export function isPromoActiveNow(product: Product): boolean {

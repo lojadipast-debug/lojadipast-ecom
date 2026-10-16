@@ -1,0 +1,331 @@
+import { useState } from 'react';
+import {
+  ChevronRight,
+  Heart,
+  Minus,
+  Plus,
+  ShoppingBag,
+  Check,
+  ZoomIn,
+} from 'lucide-react';
+import { useRouter } from '@/store/router';
+import { useCart } from '@/store/cart';
+import { formatPrice, CATEGORY_LABELS, effectivePrice, effectiveOldPrice, isOutOfStock, isPromoActiveNow } from '@/data/catalog';
+import { useProducts } from '@/store/products';
+import { ProductCard } from '@/components/ProductCard';
+import { useScrollReveal } from '@/hooks/useScrollReveal';
+
+export function ProductPage({ id }: { id: string }) {
+  useScrollReveal();
+  const { navigate } = useRouter();
+  const { addToCart, toggleFavorite, isFavorite } = useCart();
+  const { getProductById, getRelatedProducts, loading } = useProducts();
+
+  const product = getProductById(id);
+  const [activeImg, setActiveImg] = useState(0);
+  const [size, setSize] = useState<string>('');
+  const [color, setColor] = useState<string>('');
+  const [qty, setQty] = useState(1);
+  const [zoom, setZoom] = useState(false);
+  const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
+  const [added, setAdded] = useState(false);
+  const [addError, setAddError] = useState('');
+
+  const hasSizes = product?.sizes && product.sizes.length > 0;
+  const hasColors = product?.colors && product.colors.length > 0;
+
+  if (loading) {
+    return <div className="container-x py-32 text-center text-sm text-ink-500">A carregar produto…</div>;
+  }
+
+  if (!product) {
+    return (
+      <div className="container-x flex flex-col items-center justify-center gap-4 py-32 text-center">
+        <p className="font-display text-2xl font-semibold text-ink-900">Produto não encontrado</p>
+        <button onClick={() => navigate('/catalogo')} className="btn-primary">
+          Voltar ao catálogo
+        </button>
+      </div>
+    );
+  }
+
+  const related = getRelatedProducts(product);
+  const fav = isFavorite(product.id);
+  const outOfStock = isOutOfStock(product);
+  const promoNow = isPromoActiveNow(product);
+  const currentPrice = effectivePrice(product);
+  const oldPrice = effectiveOldPrice(product);
+  const discount = oldPrice
+    ? Math.round(((oldPrice - currentPrice) / oldPrice) * 100)
+    : 0;
+
+  const onZoomMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setZoomPos({ x, y });
+  };
+
+  const handleAdd = () => {
+    if (outOfStock) return;
+    const resolvedSize = hasSizes ? (size || product.sizes[0]) : 'Único';
+    const resolvedColor = hasColors ? (color || product.colors[0].name) : 'Padrão';
+    if (hasSizes && !size) setSize(product.sizes[0]);
+    if (hasColors && !color) setColor(product.colors[0].name);
+    const result = addToCart({
+      productId: product.id,
+      size: resolvedSize,
+      color: resolvedColor,
+      quantity: qty,
+    });
+    if (!result.ok) {
+      setAddError(result.message ?? 'Não foi possível adicionar.');
+      setTimeout(() => setAddError(''), 3000);
+      return;
+    }
+    setAdded(true);
+    setTimeout(() => setAdded(false), 2000);
+  };
+
+  return (
+    <div className="container-x py-10">
+      {/* breadcrumb */}
+      <nav className="reveal flex flex-wrap items-center gap-2 text-xs text-ink-400">
+        <button onClick={() => navigate('/')} className="hover:text-ink-700">Início</button>
+        <ChevronRight size={12} />
+        <button onClick={() => navigate(`/catalogo/${product.category}`)} className="hover:text-ink-700">
+          {CATEGORY_LABELS[product.category]}
+        </button>
+        <ChevronRight size={12} />
+        <span className="text-ink-700">{product.name}</span>
+      </nav>
+
+      <div className="mt-6 grid gap-10 lg:grid-cols-2">
+        {/* gallery */}
+        <div className="reveal flex flex-col gap-4 lg:flex-row-reverse">
+          <div
+            className="relative aspect-square flex-1 overflow-hidden rounded-4xl bg-cream-100 ring-1 ring-ink-100"
+            onMouseEnter={() => setZoom(true)}
+            onMouseLeave={() => setZoom(false)}
+            onMouseMove={onZoomMove}
+          >
+            <img
+              src={product.images[activeImg]}
+              alt={product.name}
+              className="h-full w-full object-cover transition-transform duration-300"
+              style={
+                zoom
+                  ? { transform: 'scale(1.8)', transformOrigin: `${zoomPos.x}% ${zoomPos.y}%` }
+                  : undefined
+              }
+            />
+            <span className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-white/80 px-2.5 py-1 text-[10px] font-semibold text-ink-600 backdrop-blur-sm">
+              <ZoomIn size={12} /> Passa o rato para ampliar
+            </span>
+            {(product.isPromo || promoNow) && discount > 0 && (
+              <span className="absolute left-3 top-3 grid min-h-14 min-w-14 place-items-center rounded-full bg-rose-500 px-3 py-2 text-lg font-extrabold text-white shadow-soft-lg ring-2 ring-white/60">
+                -{discount}%
+              </span>
+            )}
+            {outOfStock && (
+              <span className="absolute left-3 top-3 rounded-full bg-ink-900/90 px-3 py-1 text-xs font-bold text-white shadow-soft">
+                Esgotado
+              </span>
+            )}
+          </div>
+
+          {/* thumbnails */}
+          <div className="flex gap-3 lg:flex-col">
+            {product.images.map((img, i) => (
+              <button
+                key={i}
+                onClick={() => setActiveImg(i)}
+                className={`h-20 w-20 shrink-0 overflow-hidden rounded-2xl ring-2 transition-all ${
+                  activeImg === i ? 'ring-lilac-500' : 'ring-transparent hover:ring-ink-200'
+                }`}
+                aria-label={`Imagem ${i + 1}`}
+              >
+                <img src={img} alt="" className="h-full w-full object-cover" />
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* info */}
+        <div className="reveal lg:pl-4">
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-semibold uppercase tracking-wider text-lilac-600">
+              {product.brand}
+            </span>
+            {product.isNew && (
+              <span className="rounded-full bg-sky-300 px-2.5 py-0.5 text-[10px] font-bold uppercase text-sky-800">
+                Novo
+              </span>
+            )}
+          </div>
+
+          <h1 className="mt-2 font-display text-3xl font-semibold leading-tight tracking-tight text-ink-900 sm:text-4xl">
+            {product.name}
+          </h1>
+
+          <div className="mt-5 flex items-end gap-3">
+            <span className="font-display text-3xl font-semibold text-ink-900">
+              {formatPrice(currentPrice)}
+            </span>
+            {oldPrice && oldPrice > currentPrice && (
+              <span className="text-lg text-ink-400 line-through">
+                {formatPrice(oldPrice)}
+              </span>
+            )}
+          </div>
+
+          {/* stock indicator */}
+          <div className="mt-4">
+            {outOfStock ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-700">
+                Esgotado — avisa-nos quando disponível
+              </span>
+            ) : (product.stockQuantity ?? 0) <= 5 ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+                Apenas {product.stockQuantity} em stock
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-700">
+                Em stock
+              </span>
+            )}
+          </div>
+
+          {/* color */}
+          {hasColors && (
+            <div className="mt-7">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-ink-900">Cor</p>
+                <p className="text-sm text-ink-500">{color || product.colors[0].name}</p>
+              </div>
+              <div className="mt-3 flex gap-2.5">
+                {product.colors.map((c) => {
+                  const active = (color || product.colors[0].name) === c.name;
+                  return (
+                    <button
+                      key={c.name}
+                      onClick={() => setColor(c.name)}
+                      aria-label={c.name}
+                      className={`relative h-9 w-9 rounded-full ring-2 transition-all ${
+                        active ? 'ring-lilac-500 ring-offset-2 ring-offset-cream-50' : 'ring-ink-200 hover:ring-ink-300'
+                      }`}
+                      style={{ backgroundColor: c.hex }}
+                    >
+                      {active && (
+                        <Check size={14} className="absolute inset-0 m-auto text-ink-900 mix-blend-difference" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* size */}
+          {hasSizes && (
+            <div className="mt-6">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-ink-900">Tamanho</p>
+                <button className="text-xs font-semibold text-lilac-600 hover:underline">
+                  Guia de tamanhos
+                </button>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {product.sizes.map((s) => {
+                  const active = (size || product.sizes[0]) === s;
+                  return (
+                    <button
+                      key={s}
+                      onClick={() => setSize(s)}
+                      className={`min-w-12 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all ${
+                        active
+                          ? 'bg-ink-900 text-white shadow-soft'
+                          : 'bg-white text-ink-700 ring-1 ring-ink-200 hover:ring-lilac-300'
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* quantity + add */}
+          <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="flex items-center gap-1 rounded-full bg-white ring-1 ring-ink-200">
+              <button
+                onClick={() => setQty((q) => Math.max(1, q - 1))}
+                className="grid h-11 w-11 place-items-center rounded-full text-ink-600 hover:bg-cream-100"
+                aria-label="Diminuir quantidade"
+              >
+                <Minus size={16} />
+              </button>
+              <span className="w-8 text-center font-semibold text-ink-900">{qty}</span>
+              <button
+                onClick={() => setQty((q) => Math.min(product.stockQuantity ?? 0, q + 1))}
+                disabled={qty >= (product.stockQuantity ?? 0)}
+                className="grid h-11 w-11 place-items-center rounded-full text-ink-600 hover:bg-cream-100 disabled:cursor-not-allowed disabled:opacity-40"
+                aria-label="Aumentar quantidade"
+              >
+                <Plus size={16} />
+              </button>
+            </div>
+
+            <button onClick={handleAdd} disabled={outOfStock} className="btn-primary flex-1 py-3.5 disabled:cursor-not-allowed disabled:opacity-50">
+              {added ? (
+                <>
+                  <Check size={18} /> Adicionado!
+                </>
+              ) : outOfStock ? (
+                <>Esgotado</>
+              ) : (
+                <>
+                  <ShoppingBag size={18} /> Comprar — {formatPrice(currentPrice * qty)}
+                </>
+              )}
+            </button>
+
+            {addError && (
+              <p className="mt-2 text-sm font-semibold text-rose-600">{addError}</p>
+            )}
+
+            <button
+              onClick={() => toggleFavorite(product.id)}
+              aria-label={fav ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+              className={`grid h-12 w-12 shrink-0 place-items-center rounded-full ring-1 transition-all ${
+                fav
+                  ? 'bg-rose-400 text-white ring-rose-400'
+                  : 'bg-white text-ink-600 ring-ink-200 hover:text-rose-600'
+              }`}
+            >
+              <Heart size={20} className={fav ? 'fill-white' : ''} />
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      {/* related */}
+      {related.length > 0 && (
+        <section className="mt-20">
+          <h2 className="reveal font-display text-2xl font-semibold tracking-tight text-ink-900 sm:text-3xl">
+            Também vais adorar
+          </h2>
+          <div className="mt-8 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
+            {related.map((p, i) => (
+              <ProductCard key={p.id} product={p} index={i} />
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
+
